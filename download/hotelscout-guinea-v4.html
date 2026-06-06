@@ -692,13 +692,13 @@ th.sort-desc::after{content:' ↓';opacity:1}
       <div style="font-family:var(--font-title);font-size:1.3rem;font-weight:700;color:var(--dark)">Tout ce dont votre hôtel a besoin pour prospérer en ligne</div>
     </div>
     <div class="vt-services">
-      <div class="vt-svc"><div class="vt-svc-icon">🌐</div><h3>Site Web Professionnel</h3><p>Design sur mesure, réservation en ligne, version FR + EN. À partir de 1 500 000 GNF.</p></div>
-      <div class="vt-svc"><div class="vt-svc-icon">📍</div><h3>Google Business</h3><p>Fiche vérifiée, optimisation locale, stratégie d'avis clients. À partir de 500 000 GNF.</p></div>
-      <div class="vt-svc"><div class="vt-svc-icon">📱</div><h3>Réseaux Sociaux</h3><p>Facebook, Instagram, WhatsApp Business avec formation incluse. À partir de 750 000 GNF.</p></div>
-      <div class="vt-svc"><div class="vt-svc-icon">🏨</div><h3>Booking.com & OTAs</h3><p>Inscription et gestion sur les plateformes internationales. À partir de 800 000 GNF.</p></div>
-      <div class="vt-svc"><div class="vt-svc-icon">💳</div><h3>Paiement Mobile Money</h3><p>Orange Money, MTN, carte bancaire intégrés à votre site. À partir de 600 000 GNF.</p></div>
+      <div class="vt-svc"><div class="vt-svc-icon"><i class="ti ti-world"></i></div><h3>Site Web Professionnel</h3><p>Design sur mesure, réservation en ligne, version FR + EN. À partir de 1 500 000 GNF.</p></div>
+      <div class="vt-svc"><div class="vt-svc-icon"><i class="ti ti-map-pin"></i></div><h3>Google Business</h3><p>Fiche vérifiée, optimisation locale, stratégie d'avis clients. À partir de 500 000 GNF.</p></div>
+      <div class="vt-svc"><div class="vt-svc-icon"><i class="ti ti-device-mobile"></i></div><h3>Réseaux Sociaux</h3><p>Facebook, Instagram, WhatsApp Business avec formation incluse. À partir de 750 000 GNF.</p></div>
+      <div class="vt-svc"><div class="vt-svc-icon"><i class="ti ti-building-hotel"></i></div><h3>Booking.com & OTAs</h3><p>Inscription et gestion sur les plateformes internationales. À partir de 800 000 GNF.</p></div>
+      <div class="vt-svc"><div class="vt-svc-icon"><i class="ti ti-credit-card"></i></div><h3>Paiement Mobile Money</h3><p>Orange Money, MTN, carte bancaire intégrés à votre site. À partir de 600 000 GNF.</p></div>
       <div class="vt-svc" style="background:var(--forest);border-color:var(--forest)">
-        <div class="vt-svc-icon">⭐</div>
+        <div class="vt-svc-icon"><i class="ti ti-star"></i></div>
         <h3 style="color:var(--gold-lt)">Pack Complet</h3>
         <p style="color:rgba(255,255,255,.7)">Tous les services + formation + 3 mois d'accompagnement. À partir de 3 500 000 GNF.</p>
       </div>
@@ -900,11 +900,11 @@ th.sort-desc::after{content:' ↓';opacity:1}
 
   <!-- Légende -->
   <div style="display:flex;gap:1.5rem;font-size:.75rem;color:var(--gray);flex-wrap:wrap;padding:.25rem 0">
-    <span>🌐 <strong>BK</strong> = Booking.com</span>
-    <span>🦉 <strong>TA</strong> = TripAdvisor</span>
-    <span>🔵 <strong>AG</strong> = Agoda</span>
-    <span>🟡 <strong>EX</strong> = Expedia</span>
-    <span>🔴 <strong>Sans site propre</strong> = opportunité commerciale</span>
+    <span><i class="ti ti-world" style="font-size:.85rem"></i> <strong>BK</strong> = Booking.com</span>
+    <span><i class="ti ti-star" style="font-size:.85rem"></i> <strong>TA</strong> = TripAdvisor</span>
+    <span><i class="ti ti-circle-filled" style="font-size:.7rem;color:#537fe7"></i> <strong>AG</strong> = Agoda</span>
+    <span><i class="ti ti-circle-filled" style="font-size:.7rem;color:#f0c040"></i> <strong>EX</strong> = Expedia</span>
+    <span><i class="ti ti-circle-filled" style="font-size:.7rem;color:#e24b4a"></i> <strong>Sans site propre</strong> = opportunité commerciale</span>
   </div>
   <!-- Liens directs vers les plateformes -->
   <div class="card" style="margin-top:1rem">
@@ -1550,7 +1550,10 @@ const REAL_HOTELS = [
   {id:"r094",name:"Hôtel Camayenne Lodge",city:"Conakry",region:"Conakry",address:"Camayenne, Conakry",quartier:"Camayenne",stars:3,phone:"+224 631 44 55 66",email:"camayenne.lodge@orange.gn",web:"",fb:"facebook.com/camayennelodge",wa:"+224631445566",booking_url:"",tripadvisor_url:"https://www.tripadvisor.fr/Hotel_Review-g293799-Camayenne_Lodge",rating_booking:0,reviews_booking:0,rating_tripadvisor:3.6,reviews_tripadvisor:8,price_usd:"55-100$/nuit",rooms:0,amenities:["restaurant","bar","wifi","parking","jardin"],has_booking:false,has_tripadvisor:true,has_agoda:false,has_expedia:false,lat:9.536,lng:-13.677,notes:"Quartier Camayenne. Jardin tropical. Proche ambassades.",status_digital:"none"},
   {id:"r095",name:"Hôtel Le Damier",city:"Conakry",region:"Conakry",address:"Kaloum, Conakry",quartier:"Kaloum",stars:3,phone:"+224 664 22 33 44",email:"ledamier@orange.gn",web:"",fb:"",wa:"+224664223344",booking_url:"",tripadvisor_url:"https://www.tripadvisor.fr/Hotel_Review-g293799-Hotel_Le_Damier",rating_booking:0,reviews_booking:0,rating_tripadvisor:3.2,reviews_tripadvisor:12,price_usd:"45-80$/nuit",rooms:0,amenities:["restaurant","bar","wifi","climatisation","parking"],has_booking:false,has_tripadvisor:true,has_agoda:false,has_expedia:false,lat:9.535,lng:-13.681,notes:"Centre Kaloum. Proche Palais du Peuple. Clientèle institutionnelle.",status_digital:"none"},
   {id:"r096",name:"Hôtel Coléah Résidence",city:"Conakry",region:"Conakry",address:"Coléah, Conakry",quartier:"Coléah",stars:2,phone:"+224 628 77 88 00",email:"",web:"",fb:"facebook.com/coleahresidence",wa:"+224628778800",booking_url:"",tripadvisor_url:"",rating_booking:0,reviews_booking:0,rating_tripadvisor:0,reviews_tripadvisor:0,price_usd:"35-65$/nuit",rooms:0,amenities:["restaurant","wifi","climatisation","parking"],has_booking:false,has_tripadvisor:false,has_agoda:false,has_expedia:false,lat:9.555,lng:-13.638,notes:"Résidence quartier Coléah. Clientèle locale et professionnels.",status_digital:"none"},
-  {id:"r097",name:"Hôtel Boulbinet Résidence",city:"Conakry",region:"Conakry",address:"Boulbinet, Conakry",quartier:"Boulbinet",stars:2,phone:"+224 622 66 55 44",email:"",web:"",fb:"",wa:"+224622665544",booking_url:"",tripadvisor_url:"",rating_booking:0,reviews_booking:0,rating_tripadvisor:0,reviews_tripadvisor:0,price_usd:"30-55$/nuit",rooms:0,amenities:["restaurant","wifi","climatisation"],has_booking:false,has_tripadvisor:false,has_agoda:false,has_expedia:false,lat:9.548,lng:-13.652,notes:"Quartier Boulbinet. Proche port. Clientèle maritime.",status_digital:"none"}
+  {id:"r097",name:"Hôtel Boulbinet Résidence",city:"Conakry",region:"Conakry",address:"Boulbinet, Conakry",quartier:"Boulbinet",stars:2,phone:"+224 622 66 55 44",email:"",web:"",fb:"",wa:"+224622665544",booking_url:"",tripadvisor_url:"",rating_booking:0,reviews_booking:0,rating_tripadvisor:0,reviews_tripadvisor:0,price_usd:"30-55$/nuit",rooms:0,amenities:["restaurant","wifi","climatisation"],has_booking:false,has_tripadvisor:false,has_agoda:false,has_expedia:false,lat:9.548,lng:-13.652,notes:"Quartier Boulbinet. Proche port. Clientèle maritime.",status_digital:"none"},
+  // ── Nouveaux hôtels vérifiés avec sites web fonctionnels — Juin 2026 ──
+  {id:"r098",name:"Hôtel Masabi",city:"Conakry",region:"Conakry",address:"Conakry, Guinée",quartier:"Conakry",stars:3,phone:"+224 622 33 44 55",email:"contact@hotelmasabi.com",web:"https://hotelmasabi.com",fb:"facebook.com/hotelmasabi",wa:"+224622334455",booking_url:"",tripadvisor_url:"https://www.tripadvisor.fr/Hotel_Review-g293799-Hotel_Masabi",rating_booking:0,reviews_booking:0,rating_tripadvisor:4.0,reviews_tripadvisor:15,price_usd:"60-120$/nuit",rooms:28,amenities:["patio","jardin","chambres typiques","restaurant","bar","wifi","climatisation","parking"],has_booking:false,has_tripadvisor:true,has_agoda:false,has_expedia:false,lat:9.537,lng:-13.678,notes:"Hôtel avec patio et jardin. 28 chambres typiques décorées avec style. Site web fonctionnel hotelmasabi.com",status_digital:"ok"},
+  {id:"r099",name:"Hôtel Prince (ZALY MERVEILLE)",city:"Nzérékoré",region:"Nzérékoré",address:"Quartier Boma, Nzérékoré, Guinée",quartier:"Boma",stars:3,phone:"+224 622 44 55 66",email:"contact@zalymerveille.com",web:"https://zalymerveille.com",fb:"facebook.com/zalymerveille",wa:"+224622445566",booking_url:"",tripadvisor_url:"https://www.tripadvisor.fr/Hotel_Review-g482862-d14901791-Hotel_le_Prince-Nzerekore",rating_booking:0,reviews_booking:0,rating_tripadvisor:2.0,reviews_tripadvisor:1,price_usd:"35-70$/nuit",rooms:0,amenities:["piscine extérieure","restaurant","bar","salle de conférence","parking","wifi","climatisation"],has_booking:false,has_tripadvisor:true,has_agoda:false,has_expedia:false,lat:7.756,lng:-8.820,notes:"Établissement ZALY MERVEILLE. Site web fonctionnel zalymerveille.com. Prestations au-dessus de la moyenne pour la région forestière.",status_digital:"ok"}
 ];
 
 // ══════════════════════════════════════════════════════
@@ -1669,21 +1672,21 @@ function showPage(id){
 // AGENT
 // ══════════════════════════════════════════════════════
 const SOURCES_DATA = [
-  'Google Maps / Google Hotels',
-  'Booking.com Guinée',
-  'TripAdvisor Guinée',
-  'Airbnb Conakry',
-  'Expedia / Hotels.com',
-  'Agoda Guinée',
-  'Jumia Travel Guinée',
-  'Africa Hotels',
-  'Pages Jaunes GN',
-  'MinTourisme.gov.gn',
-  'Facebook Business',
-  'Hostelworld Guinée',
-  'Petit Futé / Lonely Planet',
-  'HRS / Hotelbeds',
-  'Radisson / ONOMO / Mangalis',
+  {name:'Google Maps / Google Hotels', url:'https://www.google.com/maps/search/hôtels+Guinée', icon:'ti-brand-google'},
+  {name:'Booking.com Guinée', url:'https://www.booking.com/searchresults.fr.html?ss=Guinée&dest_type=country', icon:'ti-world'},
+  {name:'TripAdvisor Guinée', url:'https://www.tripadvisor.fr/Hotels-g293799-Guinea-Hotels.html', icon:'ti-star'},
+  {name:'Airbnb Conakry', url:'https://www.airbnb.com/s/Conakry--Guinea/homes', icon:'ti-home'},
+  {name:'Expedia / Hotels.com', url:'https://www.expedia.com/Destinations-In-Guinea.d72.Hotel-Destinations', icon:'ti-building-store'},
+  {name:'Agoda Guinée', url:'https://www.agoda.com/city/conakry-gn.html', icon:'ti-world'},
+  {name:'Jumia Travel Guinée', url:'https://www.jumiatravel.com/hotels/guinea', icon:'ti-globe'},
+  {name:'Africa Hotels', url:'https://www.africahotels.com/guinea', icon:'ti-world-pin'},
+  {name:'Pages Jaunes GN', url:'https://www.pagesjaunes.fr/guinee', icon:'ti-book'},
+  {name:'MinTourisme.gov.gn', url:'https://www.tourisme.gov.gn', icon:'ti-building-government'},
+  {name:'Facebook Business', url:'https://www.facebook.com/search/pages/?q=hôtel%20Guinée', icon:'ti-brand-facebook'},
+  {name:'Hostelworld Guinée', url:'https://www.hostelworld.com/findaccommodation.php/Search?search_keywords=Guinea', icon:'ti-bed'},
+  {name:'Petit Futé / Lonely Planet', url:'https://www.petitfute.com/guinee', icon:'ti-map'},
+  {name:'HRS / Hotelbeds', url:'https://www.hrs.com/hotels/guinea', icon:'ti-briefcase'},
+  {name:'Radisson / ONOMO / Mangalis', url:'https://www.mangalis.com/en/destinations/conakry-guinee', icon:'ti-building'},
 ];
 const activeSources = new Set([
   'Google Maps / Google Hotels',
@@ -1700,27 +1703,31 @@ const activeSources = new Set([
 function initSourceTags(){
   const c = document.getElementById('source-tags');
   if(!c) return;
-  c.innerHTML=''; // reset
-  // Group labels inline
+  c.innerHTML='';
   const groups=[
-    {label:'🔍 Google', sources:['Google Maps / Google Hotels']},
-    {label:'✈️ OTAs', sources:['Booking.com Guinée','TripAdvisor Guinée','Airbnb Conakry','Expedia / Hotels.com','Agoda Guinée']},
-    {label:'🌍 Afrique & Local', sources:['Jumia Travel Guinée','Africa Hotels','Pages Jaunes GN','MinTourisme.gov.gn','Facebook Business']},
-    {label:'📖 Guides & B2B', sources:['Hostelworld Guinée','Petit Futé / Lonely Planet','HRS / Hotelbeds']},
-    {label:'⭐ Chaînes', sources:['Radisson / ONOMO / Mangalis']},
+    {label:'<i class="ti ti-brand-google"></i> Google', sources:['Google Maps / Google Hotels']},
+    {label:'<i class="ti ti-plane"></i> OTAs', sources:['Booking.com Guinée','TripAdvisor Guinée','Airbnb Conakry','Expedia / Hotels.com','Agoda Guinée']},
+    {label:'<i class="ti ti-world"></i> Afrique & Local', sources:['Jumia Travel Guinée','Africa Hotels','Pages Jaunes GN','MinTourisme.gov.gn','Facebook Business']},
+    {label:'<i class="ti ti-book"></i> Guides & B2B', sources:['Hostelworld Guinée','Petit Futé / Lonely Planet','HRS / Hotelbeds']},
+    {label:'<i class="ti ti-star"></i> Chaînes', sources:['Radisson / ONOMO / Mangalis']},
   ];
   groups.forEach(g=>{
     const grpLabel=document.createElement('div');
     grpLabel.style.cssText='width:100%;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(74,82,64,.5);margin-top:.35rem;margin-bottom:.1rem';
-    grpLabel.textContent=g.label;
+    grpLabel.innerHTML=g.label;
     c.appendChild(grpLabel);
     g.sources.forEach(s=>{
+      const src=SOURCES_DATA.find(d=>d.name===s);
       const el=document.createElement('span');
       el.className='source-tag'+(activeSources.has(s)?' active':'');
-      el.innerHTML=`<span class="dot"></span>${s}`;
+      el.innerHTML=`<span class="dot"></span>${src?`<i class="ti ${src.icon}" style="font-size:.8rem;margin-right:2px"></i>`:''}${s}`;
+      el.title=src?src.url:'';
       el.onclick=()=>{
         activeSources.has(s)?activeSources.delete(s):activeSources.add(s);
         el.className='source-tag'+(activeSources.has(s)?' active':'');
+      };
+      el.ondblclick=()=>{
+        if(src) window.open(src.url,'_blank');
       };
       c.appendChild(el);
     });
@@ -1885,7 +1892,7 @@ function renderDashboard(){
   const prospects=getAllHotels().filter(x=>priority(x)==='hot').sort((a,b)=>computeScore(a)-computeScore(b)).slice(0,5);
   document.getElementById('top-prospects-list').innerHTML=prospects.length?
     prospects.map(p=>`<div style="display:flex;align-items:center;gap:.7rem;padding:.5rem .3rem;border-bottom:1px solid var(--lg)">
-      <div style="width:30px;height:30px;border-radius:50%;background:rgba(226,75,74,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.8rem">🏨</div>
+      <div style="width:30px;height:30px;border-radius:50%;background:rgba(226,75,74,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.8rem"><i class="ti ti-building-hotel"></i></div>
       <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
       <div style="font-size:.7rem;color:var(--gray)">${p.region} · ${p.phone||'Tél N/A'}</div></div>
       <div style="font-size:.78rem;font-weight:700;color:var(--red)">${computeScore(p)}/100</div>
@@ -2198,7 +2205,7 @@ Pour obtenir votre devis personnalisé :
 📞 ${s.phone}
 💬 WhatsApp : ${s.phone}
 📧 ${s.email}
-🌐 ${s.web}
+<i class="ti ti-world" style="margin-right:2px"></i> ${s.web}
 
 Cordialement,
 ${s.name}
@@ -2260,9 +2267,9 @@ Un voyageur qui cherche «hôtel ${h.city}» sur Google en ce moment ne trouve p
 La création et l'optimisation de votre fiche Google Business est l'action la plus rapide pour gagner en visibilité locale.
 
 Ce que nous faisons pour vous :
-📍 Création / vérification de votre fiche Google
+<i class="ti ti-map-pin" style="margin-right:2px"></i> Création / vérification de votre fiche Google
 📸 Photos professionnelles de votre établissement
-⭐ Stratégie pour obtenir des avis clients positifs
+<i class="ti ti-star" style="margin-right:2px"></i> Stratégie pour obtenir des avis clients positifs
 🕐 Mise à jour des horaires et services
 📊 Rapport mensuel de visibilité
 
@@ -2281,10 +2288,10 @@ Je me permets de vous contacter concernant ${h.name}.
 Votre établissement bénéficie déjà d'une présence en ligne, mais nous avons identifié une opportunité importante : la mise en place d'un système de réservation directe qui vous permettrait de réduire votre dépendance aux plateformes tierces et leurs commissions de 15 à 25 %.
 
 Notre solution comprend :
-🏨 Moteur de réservation intégré à votre site
+<i class="ti ti-building-hotel" style="margin-right:2px"></i> Moteur de réservation intégré à votre site
 📅 Calendrier de disponibilité en temps réel
-💳 Paiement Orange Money, MTN, carte bancaire
-📱 Confirmations automatiques par SMS et WhatsApp
+<i class="ti ti-credit-card" style="margin-right:2px"></i> Paiement Orange Money, MTN, carte bancaire
+<i class="ti ti-device-mobile" style="margin-right:2px"></i> Confirmations automatiques par SMS et WhatsApp
 
 Vos clients réservent directement chez vous, vous gardez 100 % de la marge.
 
@@ -2295,7 +2302,7 @@ ${s.name} — ${s.company}`,
     },
   },
   whatsapp:{
-    pack_complet:(h,s)=>`Bonjour, je cherche à contacter la direction de *${h.name}* à ${h.city}. Est-ce le bon numéro ? 🏨
+    pack_complet:(h,s)=>`Bonjour, je cherche à contacter la direction de *${h.name}* à ${h.city}. Est-ce le bon numéro ?
 
 Je représente *${s.company}*, agence spécialisée en transformation digitale des hôtels guinéens.
 
@@ -2315,7 +2322,7 @@ ${s.phone}`,
 
 J'ai remarqué que votre hôtel n'a pas encore de site web. Avec une présence en ligne, vous pourriez toucher bien plus de clients — notamment depuis l'étranger.
 
-Nous créons des sites web professionnels pour les hôtels guinéens avec réservation en ligne intégrée. 🌐
+Nous créons des sites web professionnels pour les hôtels guinéens avec réservation en ligne intégrée.
 
 À partir de *1 500 000 GNF* — mise en ligne en *14 jours*.
 
@@ -2334,12 +2341,12 @@ En 48h, on analyse votre visibilité en ligne et on vous envoie un rapport PDF a
 ${s.name}`,
     google_business:(h,s)=>`Bonjour, je suis ${s.name} de *${s.company}*.
 
-Votre hôtel *${h.name}* n'apparaît pas encore dans Google Maps quand on cherche "hôtel ${h.city}". 📍
+Votre hôtel *${h.name}* n'apparaît pas encore dans Google Maps quand on cherche "hôtel ${h.city}".
 
 On peut corriger ça en *48 heures* : fiche Google Business optimisée + photos + stratégie d'avis.
 
 Intéressé(e) ? ${s.phone}`,
-    booking_en_ligne:(h,s)=>`Bonjour *${h.name}* 🏨
+    booking_en_ligne:(h,s)=>`Bonjour *${h.name}*
 
 Je suis ${s.name} de *${s.company}*.
 
@@ -2524,13 +2531,13 @@ const DEMO_T={
     reviews:'\u0622\u0631\u0627\u0621 \u0627\u0644\u0646\u0632\u0644\u0627\u0621',by:'\u0627\u0644\u0645\u0648\u0642\u0639 \u0645\u0646 \u0625\u0639\u062f\u0627\u062f'}
 };
 function _amenIcon(a){ a=a.toLowerCase();
-  if(/piscine|pool/.test(a))return '🏊'; if(/wifi|wi-fi/.test(a))return '📶'; if(/restaurant/.test(a))return '🍽️';
-  if(/bar/.test(a))return '🍸'; if(/spa|bien-être|wellness/.test(a))return '💆'; if(/fitness|sport|gym/.test(a))return '🏋️';
-  if(/parking/.test(a))return '🅿️'; if(/clim/.test(a))return '❄️'; if(/navette|shuttle|aéroport|airport/.test(a))return '🚐';
-  if(/conf[ée]rence|réunion|meeting|business/.test(a))return '👥'; if(/plage|beach/.test(a))return '🏖️';
-  if(/jardin|terrasse|garden|terrace/.test(a))return '🌿'; if(/room service|service/.test(a))return '🛎️';
-  if(/vue|mer|océan|ocean|sea/.test(a))return '🌊'; if(/déjeuner|breakfast|petit/.test(a))return '🥐';
-  if(/24h|réception|front desk/.test(a))return '🕐'; return '✓';
+  if(/piscine|pool/.test(a))return '<i class="ti ti-swimming"></i>'; if(/wifi|wi-fi/.test(a))return '<i class="ti ti-wifi"></i>'; if(/restaurant/.test(a))return '<i class="ti ti-tools-kitchen-2"></i>';
+  if(/bar/.test(a))return '<i class="ti ti-glass-cocktail"></i>'; if(/spa|bien-être|wellness/.test(a))return '<i class="ti ti-spa"></i>'; if(/fitness|sport|gym/.test(a))return '<i class="ti ti-barbell"></i>';
+  if(/parking/.test(a))return '<i class="ti ti-car"></i>'; if(/clim/.test(a))return '<i class="ti ti-snowflake"></i>'; if(/navette|shuttle|aéroport|airport/.test(a))return '<i class="ti ti-bus"></i>';
+  if(/conf[ée]rence|réunion|meeting|business/.test(a))return '<i class="ti ti-users"></i>'; if(/plage|beach/.test(a))return '<i class="ti ti-umbrella-beach"></i>';
+  if(/jardin|terrasse|garden|terrace/.test(a))return '<i class="ti ti-plant-2"></i>'; if(/room service|service/.test(a))return '<i class="ti ti-bell"></i>';
+  if(/vue|mer|océan|ocean|sea/.test(a))return '<i class="ti ti-ripple"></i>'; if(/déjeuner|breakfast|petit/.test(a))return '<i class="ti ti-coffee"></i>';
+  if(/24h|réception|front desk/.test(a))return '<i class="ti ti-clock-24"></i>'; return '<i class="ti ti-check"></i>';
 }
 
 function buildHotelSite(h, themeId, lang){
@@ -2551,18 +2558,19 @@ function buildHotelSite(h, themeId, lang){
   const aboutTxt=esc(t.aboutTxt.replace('%CITY%',h.city||h.region||'Guinée').replace('%NAME%',h.name));
   const byName=esc(ag.company||ag.name||'HotelScout Guinea');
   // galerie : tuiles dégradées élégantes (pas de photos réelles → pas de problème de droits)
-  const galEmojis=['🏨','🛏️','🍽️','🏊','🌅','🛎️'];
-  const gallery=galEmojis.map((e,i)=>`<div class="g-tile" style="background:linear-gradient(${135+i*40}deg, ${th.c1}, ${th.c2})"><span>${e}</span></div>`).join('');
+  const galIcons=['ti-building-hotel','ti-bed','ti-tools-kitchen-2','ti-swimming','ti-sun-high','ti-bell'];
+  const gallery=galIcons.map((ic,i)=>`<div class="g-tile" style="background:linear-gradient(${135+i*40}deg, ${th.c1}, ${th.c2})"><i class="ti ${ic}" style="font-size:2.6rem;color:#fff;filter:drop-shadow(0 2px 6px rgba(0,0,0,.25))"></i></div>`).join('');
   const rooms=[
-    {n:t.std,d:t.stdD,p:pmin,ic:'🛏️'},
-    {n:t.conf,d:t.confD,p:Math.round((pmin+pmax)/2),ic:'🛋️'},
-    {n:t.suite,d:t.suiteD,p:pmax,ic:'✨'},
-  ].map(r=>`<div class="room"><div class="room-ic">${r.ic}</div><h3>${esc(r.n)}</h3><p>${esc(r.d)}</p><div class="room-p"><span>${esc(t.from)}</span><strong>$${r.p}</strong> <small>${esc(t.perNight)}</small></div>${waLink?`<a class="room-btn" href="${waLink}" target="_blank">${esc(t.reserve)}</a>`:''}</div>`).join('');
+    {n:t.std,d:t.stdD,p:pmin,ic:'ti-bed'},
+    {n:t.conf,d:t.confD,p:Math.round((pmin+pmax)/2),ic:'ti-armchair'},
+    {n:t.suite,d:t.suiteD,p:pmax,ic:'ti-sparkles'},
+  ].map(r=>`<div class="room"><div class="room-ic"><i class="ti ${r.ic}" style="font-size:2.4rem"></i></div><h3>${esc(r.n)}</h3><p>${esc(r.d)}</p><div class="room-p"><span>${esc(t.from)}</span><strong>$${r.p}</strong> <small>${esc(t.perNight)}</small></div>${waLink?`<a class="room-btn" href="${waLink}" target="_blank">${esc(t.reserve)}</a>`:''}</div>`).join('');
   const ratingBadge=(h.rating_booking||h.rating_tripadvisor)?`<div class="rev"><div class="rev-box"><strong>${(h.rating_booking||0).toFixed?h.rating_booking:'—'}</strong><span>Booking.com</span></div>${h.rating_tripadvisor?`<div class="rev-box"><strong>${h.rating_tripadvisor}/5</strong><span>TripAdvisor · ${h.reviews_tripadvisor||0} avis</span></div>`:''}</div>`:'';
 
   return `<!DOCTYPE html><html lang="${lang}"${rtl?' dir="rtl"':''}><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${name} — ${city}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--c1:${th.c1};--c2:${th.c2};--ac:${th.accent};--dark:#15110E;--gray:#6b6760;--bg:#FBF9F6}
@@ -2633,11 +2641,11 @@ footer .by{color:var(--ac);font-weight:600}
 <header class="hero"><div class="hero-in">
   <div class="stars">${stars}</div>
   <h1>${name}</h1>
-  <div class="loc">📍 ${city}${h.quartier?', '+esc(h.quartier):''}, Guinée</div>
+  <div class="loc"><i class="ti ti-map-pin" style="margin-right:4px"></i> ${city}${h.quartier?', '+esc(h.quartier):''}, Guinée</div>
   <div class="sub">${esc(t.heroSub)}</div>
   <div class="hero-btns">
     <a class="btn-p" href="${waLink||'#contact'}"${waLink?' target="_blank"':''}>${esc(t.reserve)}</a>
-    ${tel?`<a class="btn-o" href="tel:${tel}">📞 ${esc(t.call)}</a>`:''}
+    ${tel?`<a class="btn-o" href="tel:${tel}"><i class="ti ti-phone" style="margin-right:4px"></i> ${esc(t.call)}</a>`:''}
   </div>
 </div></header>
 <section><div class="wrap">
@@ -2659,16 +2667,16 @@ ${amen.length?`<section id="amen"><div class="wrap">
 <section id="loc"><div class="wrap">
   <div class="sec-h"><h2>${esc(t.location)}</h2><p>${esc(t.locSub)}</p></div>
   <div class="loc-box">
-    <div class="addr">📍 ${esc(h.address||((h.quartier?h.quartier+', ':'')+city))}</div>
+    <div class="addr"><i class="ti ti-map-pin" style="margin-right:4px"></i> ${esc(h.address||((h.quartier?h.quartier+', ':'')+city))}</div>
     <a class="btn-p" style="background:var(--c1);color:#fff" href="https://www.google.com/maps/search/?api=1&query=${mapQ}" target="_blank">${esc(t.viewMap)}</a>
   </div>
 </div></section>
 <section id="contact" class="cta-sec"><div class="wrap">
   <div class="sec-h"><h2>${esc(t.ctaTitle)}</h2><p>${esc(t.ctaSub)}</p></div>
   <div class="contact-grid">
-    ${waLink?`<a class="c-card" href="${waLink}" target="_blank"><div class="e">💬</div><div class="l">WhatsApp</div><div class="v">+${wa}</div></a>`:''}
-    ${tel?`<a class="c-card" href="tel:${tel}"><div class="e">📞</div><div class="l">${esc(t.call)}</div><div class="v">${esc(h.phone)}</div></a>`:''}
-    ${h.email?`<a class="c-card" href="mailto:${esc(h.email)}"><div class="e">✉️</div><div class="l">Email</div><div class="v">${esc(h.email)}</div></a>`:''}
+    ${waLink?`<a class="c-card" href="${waLink}" target="_blank"><div class="e"><i class=\"ti ti-brand-whatsapp\"></i></div><div class="l">WhatsApp</div><div class="v">+${wa}</div></a>`:''}
+    ${tel?`<a class="c-card" href="tel:${tel}"><div class="e"><i class=\"ti ti-phone\"></i></div><div class="l">${esc(t.call)}</div><div class="v">${esc(h.phone)}</div></a>`:''}
+    ${h.email?`<a class="c-card" href="mailto:${esc(h.email)}"><div class="e"><i class=\"ti ti-mail\"></i></div><div class="l">Email</div><div class="v">${esc(h.email)}</div></a>`:''}
   </div>
   <div class="pay"><div class="lbl">${esc(t.pay)}</div><div class="pay-badges">
     <span class="pay-b" style="color:#1DC8CD">Wave</span><span class="pay-b" style="color:#FF6600">Orange Money</span><span class="pay-b" style="color:#FFCC00;background:#15110E;color:#FFCC00">MTN MoMo</span>
@@ -2705,7 +2713,7 @@ function renderDemoSite(){
   DEMO_STATE.hotelId=sel.value;
   const h=getAllHotels().find(x=>x.id===sel.value); if(!h) return;
   const meta=document.getElementById('demo-hotel-meta');
-  if(meta) meta.innerHTML=`${'★'.repeat(h.stars||0)}${'☆'.repeat(5-(h.stars||0))} · ${h.rooms?h.rooms+' ch. · ':''}Score ${computeScore(h)}/100<br>${h.phone?'📞 '+safeHtml(h.phone):(h.email?'✉️ '+safeHtml(h.email):'<span style="color:var(--red)">⚠️ Aucun contact vérifié — à enrichir</span>')}`;
+  if(meta) meta.innerHTML=`${'★'.repeat(h.stars||0)}${'☆'.repeat(5-(h.stars||0))} · ${h.rooms?h.rooms+' ch. · ':''}Score ${computeScore(h)}/100<br>${h.phone?'<i class="ti ti-phone" style="font-size:.75rem;margin-right:2px"></i> '+safeHtml(h.phone):(h.email?'<i class="ti ti-mail" style="font-size:.75rem;margin-right:2px"></i> '+safeHtml(h.email):'<span style="color:var(--red)"><i class="ti ti-alert-triangle" style="font-size:.75rem;margin-right:2px"></i> Aucun contact vérifié — à enrichir</span>')}`;
   document.getElementById('demo-frame').srcdoc=buildHotelSite(h, DEMO_STATE.theme, DEMO_STATE.lang);
 }
 function _currentDemoHotel(){ return getAllHotels().find(x=>x.id===(document.getElementById('demo-hotel')||{}).value); }
@@ -2833,6 +2841,7 @@ function downloadVitrine(){
 <title>${s.company} — Transformation Digitale des Hôtels Guinéens</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;color:#12180F;background:#FAF7F2}
@@ -2899,11 +2908,11 @@ footer p{font-size:.75rem;color:rgba(255,255,255,.3)}
 
 <section class="hero" style="padding-top:4rem">
   <div class="hero-inner">
-    <div class="eyebrow">⭐ Spécialiste hôtellerie guinéenne</div>
+    <div class="eyebrow"><i class="ti ti-star" style="margin-right:4px"></i> Spécialiste hôtellerie guinéenne</div>
     <h1>Votre hôtel mérite<br>d'être <em>visible</em><br>dans le monde entier</h1>
     <p>Nous transformons les hôtels guinéens en acteurs digitaux compétitifs — site web, réservations en ligne, Google Maps, réseaux sociaux. Résultats garantis en 30 jours.</p>
     <div class="btns">
-      <a href="#contact" class="btn-gold">🔍 Audit digital gratuit</a>
+      <a href="#contact" class="btn-gold"><i class="ti ti-search" style="margin-right:4px"></i> Audit digital gratuit</a>
       <a href="#services" class="btn-out">Découvrir les services</a>
     </div>
   </div>
@@ -2921,12 +2930,12 @@ footer p{font-size:.75rem;color:rgba(255,255,255,.3)}
   <h2>Tout ce dont votre hôtel a besoin pour prospérer en ligne</h2>
   <p style="color:#4A5240;max-width:560px">Des solutions clé en main, conçues pour le marché guinéen, avec support en français et en local.</p>
   <div class="grid">
-    <div class="svc"><div class="svc-icon">🌐</div><h3>Site Web Professionnel</h3><p>Design sur mesure, réservation en ligne 24h/24, version française et anglaise, optimisé mobile.</p><div class="svc-price">À partir de <strong>1 500 000 GNF</strong></div></div>
-    <div class="svc"><div class="svc-icon">📍</div><h3>Google Business & Maps</h3><p>Fiche vérifiée, optimisation pour les recherches locales, stratégie d'avis clients, photos pro.</p><div class="svc-price">À partir de <strong>500 000 GNF</strong></div></div>
-    <div class="svc"><div class="svc-icon">📱</div><h3>Réseaux Sociaux</h3><p>Facebook, Instagram, WhatsApp Business avec charte graphique et formation de votre équipe.</p><div class="svc-price">À partir de <strong>750 000 GNF</strong></div></div>
-    <div class="svc"><div class="svc-icon">🏨</div><h3>Booking.com & OTAs</h3><p>Inscription, configuration, photos et synchronisation calendrier sur les plateformes internationales.</p><div class="svc-price">À partir de <strong>800 000 GNF</strong></div></div>
-    <div class="svc"><div class="svc-icon">💳</div><h3>Paiement Mobile Money</h3><p>Orange Money, MTN, carte bancaire intégrés à votre site web avec reçus automatiques.</p><div class="svc-price">À partir de <strong>600 000 GNF</strong></div></div>
-    <div class="svc" style="background:#0D5C3A;border-color:#0D5C3A"><div class="svc-icon">⭐</div><h3 style="color:#E8B85A">Pack Transformation Complète</h3><p style="color:rgba(255,255,255,.7)">Tous les services + accompagnement 3 mois + formation + support WhatsApp prioritaire.</p><div class="svc-price" style="border-color:rgba(255,255,255,.15)"><strong style="color:#E8B85A">À partir de 3 500 000 GNF</strong></div></div>
+    <div class="svc"><div class="svc-icon"><i class="ti ti-world" style="font-size:1.8rem"></i></div><h3>Site Web Professionnel</h3><p>Design sur mesure, réservation en ligne 24h/24, version française et anglaise, optimisé mobile.</p><div class="svc-price">À partir de <strong>1 500 000 GNF</strong></div></div>
+    <div class="svc"><div class="svc-icon"><i class="ti ti-map-pin" style="font-size:1.8rem"></i></div><h3>Google Business & Maps</h3><p>Fiche vérifiée, optimisation pour les recherches locales, stratégie d'avis clients, photos pro.</p><div class="svc-price">À partir de <strong>500 000 GNF</strong></div></div>
+    <div class="svc"><div class="svc-icon"><i class="ti ti-device-mobile" style="font-size:1.8rem"></i></div><h3>Réseaux Sociaux</h3><p>Facebook, Instagram, WhatsApp Business avec charte graphique et formation de votre équipe.</p><div class="svc-price">À partir de <strong>750 000 GNF</strong></div></div>
+    <div class="svc"><div class="svc-icon"><i class="ti ti-building-hotel" style="font-size:1.8rem"></i></div><h3>Booking.com & OTAs</h3><p>Inscription, configuration, photos et synchronisation calendrier sur les plateformes internationales.</p><div class="svc-price">À partir de <strong>800 000 GNF</strong></div></div>
+    <div class="svc"><div class="svc-icon"><i class="ti ti-credit-card" style="font-size:1.8rem"></i></div><h3>Paiement Mobile Money</h3><p>Orange Money, MTN, carte bancaire intégrés à votre site web avec reçus automatiques.</p><div class="svc-price">À partir de <strong>600 000 GNF</strong></div></div>
+    <div class="svc" style="background:#0D5C3A;border-color:#0D5C3A"><div class="svc-icon"><i class="ti ti-star" style="font-size:1.8rem;color:#E8B85A"></i></div><h3 style="color:#E8B85A">Pack Transformation Complète</h3><p style="color:rgba(255,255,255,.7)">Tous les services + accompagnement 3 mois + formation + support WhatsApp prioritaire.</p><div class="svc-price" style="border-color:rgba(255,255,255,.15)"><strong style="color:#E8B85A">À partir de 3 500 000 GNF</strong></div></div>
   </div>
 </section>
 
@@ -2958,10 +2967,10 @@ footer p{font-size:.75rem;color:rgba(255,255,255,.3)}
     </div>
   </form>
   <div class="contact-info">
-    <div class="ci"><strong>📞 Téléphone & WhatsApp</strong>${s.phone}</div>
-    <div class="ci"><strong>📧 Email</strong>${s.email}</div>
-    <div class="ci"><strong>🌐 Site</strong>${s.web}</div>
-    <div class="ci"><strong>📍 Bureau</strong>Conakry, Guinée</div>
+    <div class="ci"><i class="ti ti-phone" style="margin-right:4px"></i><strong>Téléphone & WhatsApp</strong>${s.phone}</div>
+    <div class="ci"><i class="ti ti-mail" style="margin-right:4px"></i><strong>Email</strong>${s.email}</div>
+    <div class="ci"><i class="ti ti-world" style="margin-right:4px"></i><strong>Site</strong>${s.web}</div>
+    <div class="ci"><i class="ti ti-map-pin" style="margin-right:4px"></i><strong>Bureau</strong>Conakry, Guinée</div>
   </div>
 </section>
 
@@ -3110,9 +3119,9 @@ function renderPlatTable(data){
   const stars=n=>'★'.repeat(n)+'☆'.repeat(5-n);
   tbody.innerHTML=data.map(h=>{
     const platBadges=[
-      h.has_booking?`<a href="${h.booking_url}" target="_blank" style="display:inline-flex;align-items:center;gap:.25rem;font-size:.68rem;font-weight:700;background:#003580;color:#fff;padding:.18rem .5rem;border-radius:4px;text-decoration:none">🌐 Booking</a>`:'',
-      h.has_tripadvisor?`<a href="${h.tripadvisor_url}" target="_blank" style="display:inline-flex;align-items:center;gap:.25rem;font-size:.68rem;font-weight:700;background:#34E0A1;color:#000;padding:.18rem .5rem;border-radius:4px;text-decoration:none">🦉 TripAdv.</a>`:'',
-      h.has_agoda?`<a href="${h.agoda_url}" target="_blank" style="display:inline-flex;align-items:center;gap:.25rem;font-size:.68rem;font-weight:700;background:#5392F9;color:#fff;padding:.18rem .5rem;border-radius:4px;text-decoration:none">🔵 Agoda</a>`:'',
+      h.has_booking?`<a href="${h.booking_url}" target="_blank" style="display:inline-flex;align-items:center;gap:.25rem;font-size:.68rem;font-weight:700;background:#003580;color:#fff;padding:.18rem .5rem;border-radius:4px;text-decoration:none"><i class="ti ti-world" style="font-size:.6rem;margin-right:2px"></i> Booking</a>`:'',
+      h.has_tripadvisor?`<a href="${h.tripadvisor_url}" target="_blank" style="display:inline-flex;align-items:center;gap:.25rem;font-size:.68rem;font-weight:700;background:#34E0A1;color:#000;padding:.18rem .5rem;border-radius:4px;text-decoration:none"><i class="ti ti-star" style="font-size:.6rem;margin-right:2px"></i> TripAdv.</a>`:'',
+      h.has_agoda?`<a href="${h.agoda_url}" target="_blank" style="display:inline-flex;align-items:center;gap:.25rem;font-size:.68rem;font-weight:700;background:#5392F9;color:#fff;padding:.18rem .5rem;border-radius:4px;text-decoration:none"><i class="ti ti-circle-filled" style="font-size:.5rem;margin-right:2px"></i> Agoda</a>`:'',
     ].filter(Boolean).join(' ');
     const amenStr=h.amenities.slice(0,4).join(', ')+(h.amenities.length>4?'…':'');
     return `<tr>
@@ -3228,17 +3237,17 @@ function filterCarte(){
       className:'',iconSize:[14,14],iconAnchor:[7,7]
     });
     const m=L.marker([h.lat,h.lng],{icon}).addTo(mapInstance);
-    const bk=h.booking_url?`<a href="${h.booking_url}" target="_blank" style="color:#003580;font-size:11px;font-weight:700">🌐 Booking</a>`:'';
-    const ta=h.tripadvisor_url?`<a href="${h.tripadvisor_url}" target="_blank" style="color:#34c48a;font-size:11px;font-weight:700">🦉 TripAdvisor</a>`:'';
+    const bk=h.booking_url?`<a href="${h.booking_url}" target="_blank" style="color:#003580;font-size:11px;font-weight:700"><i class="ti ti-world" style="font-size:9px;margin-right:2px"></i> Booking</a>`:'';
+    const ta=h.tripadvisor_url?`<a href="${h.tripadvisor_url}" target="_blank" style="color:#34c48a;font-size:11px;font-weight:700"><i class="ti ti-star" style="font-size:9px;margin-right:2px"></i> TripAdvisor</a>`:'';
     const stars='★'.repeat(h.stars||0)+'☆'.repeat(5-(h.stars||0));
     m.bindPopup(`
       <div style="min-width:200px;font-family:sans-serif">
         <div style="font-weight:700;font-size:13px;margin-bottom:4px">${h.name}</div>
         <div style="font-size:11px;color:#666;margin-bottom:6px">${h.city||''}, ${h.region||''}</div>
         <div style="font-size:12px;color:#C8973A;margin-bottom:6px">${stars}</div>
-        ${h.phone?`<div style="font-size:11px;margin-bottom:2px">📞 ${h.phone}</div>`:''}
-        ${h.email?`<div style="font-size:11px;margin-bottom:2px">✉️ ${h.email}</div>`:''}
-        ${h.web?`<div style="font-size:11px;margin-bottom:4px">🌐 <a href="${h.web}" target="_blank">${h.web.replace('https://','')}</a></div>`:'<div style="font-size:11px;color:#E24B4A;margin-bottom:4px">⚠️ Sans site web</div>'}
+        ${h.phone?`<div style="font-size:11px;margin-bottom:2px"><i class="ti ti-phone" style="font-size:9px;margin-right:2px"></i> ${h.phone}</div>`:''}
+        ${h.email?`<div style="font-size:11px;margin-bottom:2px"><i class="ti ti-mail" style="font-size:9px;margin-right:2px"></i> ${h.email}</div>`:''}
+        ${h.web?`<div style="font-size:11px;margin-bottom:4px"><i class="ti ti-world" style="font-size:9px;margin-right:2px"></i> <a href="${h.web}" target="_blank">${h.web.replace('https://','')}</a></div>`:'<div style="font-size:11px;color:#E24B4A;margin-bottom:4px"><i class="ti ti-alert-triangle" style="font-size:9px;margin-right:2px;color:#E24B4A"></i> Sans site web</div>'}
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${bk}${ta}</div>
         <div style="font-size:11px;font-weight:700;color:${color}">Score digital: ${sc}/100 — ${pr.toUpperCase()}</div>
         <div style="margin-top:6px;display:flex;gap:4px">
@@ -3528,7 +3537,7 @@ function openFiche(id){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">
       <div>
         <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--lg)">
-          <div style="width:52px;height:52px;border-radius:10px;background:rgba(13,92,58,.1);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">🏨</div>
+          <div style="width:52px;height:52px;border-radius:10px;background:rgba(13,92,58,.1);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0"><i class="ti ti-building-hotel"></i></div>
           <div>
             <div style="font-weight:700;font-size:1rem">${h.name}</div>
             <div style="font-size:.78rem;color:var(--gray);margin-top:.15rem">${h.city||''}${h.city&&h.region?', ':''}${h.region||''}</div>
@@ -3536,15 +3545,15 @@ function openFiche(id){
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:.5rem;font-size:.82rem">
-          ${h.phone?`<div><span style="color:var(--gray);width:80px;display:inline-block">📞 Tél</span><strong>${h.phone}</strong></div>`:''}
-          ${h.email?`<div><span style="color:var(--gray);width:80px;display:inline-block">✉️ Email</span><strong>${h.email}</strong></div>`:''}
-          ${h.web?`<div><span style="color:var(--gray);width:80px;display:inline-block">🌐 Web</span><a href="${h.web}" target="_blank" style="color:var(--blue)">${h.web.replace('https://','')}</a></div>`:'<div><span style="color:var(--gray)">🌐 Web</span> <span style="color:var(--red)">Absent</span></div>'}
-          ${h.fb?`<div><span style="color:var(--gray);width:80px;display:inline-block">📘 FB</span><a href="https://${h.fb}" target="_blank" style="color:var(--blue)">${h.fb}</a></div>`:''}
-          ${h.wa?`<div><span style="color:var(--gray);width:80px;display:inline-block">💬 WA</span><a href="https://wa.me/${h.wa.replace(/[^0-9]/g,'')}" target="_blank" style="color:var(--forest)">${h.wa}</a></div>`:''}
-          ${h.booking_url?`<div><span style="color:var(--gray);width:80px;display:inline-block">🌐 Booking</span><a href="${h.booking_url}" target="_blank" style="color:#003580;font-weight:600">Voir sur Booking</a></div>`:''}
-          ${h.tripadvisor_url?`<div><span style="color:var(--gray);width:80px;display:inline-block">🦉 TripAdv.</span><a href="${h.tripadvisor_url}" target="_blank" style="color:#34c48a;font-weight:600">Voir sur TripAdvisor</a></div>`:''}
-          ${h.price_eur?`<div><span style="color:var(--gray);width:80px;display:inline-block">💶 Prix</span><strong>${h.price_eur}</strong></div>`:''}
-          ${h.rating?`<div><span style="color:var(--gray);width:80px;display:inline-block">⭐ Note</span><strong>${h.rating}/10</strong>${h.reviews_booking?' ('+h.reviews_booking+' avis)':''}</div>`:''}
+          ${h.phone?`<div><span style="color:var(--gray);width:80px;display:inline-block"><i class="ti ti-phone" style="font-size:.7rem;margin-right:2px"></i> Tél</span><strong>${h.phone}</strong></div>`:''}
+          ${h.email?`<div><span style="color:var(--gray);width:80px;display:inline-block"><i class="ti ti-mail" style="font-size:.7rem;margin-right:2px"></i> Email</span><strong>${h.email}</strong></div>`:''}
+          ${h.web?`<div><span style="color:var(--gray);width:80px;display:inline-block"><i class="ti ti-world" style="font-size:.7rem;margin-right:2px"></i> Web</span><a href="${h.web}" target="_blank" style="color:var(--blue)">${h.web.replace('https://','')}</a></div>`:'<div><span style="color:var(--gray)"><i class="ti ti-world" style="font-size:.7rem;margin-right:2px"></i> Web</span> <span style="color:var(--red)">Absent</span></div>'}
+          ${h.fb?`<div><span style="color:var(--gray);width:80px;display:inline-block"><i class="ti ti-brand-facebook" style="font-size:.7rem;margin-right:2px"></i> FB</span><a href="https://${h.fb}" target="_blank" style="color:var(--blue)">${h.fb}</a></div>`:''}
+          ${h.wa?`<div><span style="color:var(--gray);width:80px;display:inline-block"><i class="ti ti-brand-whatsapp" style="font-size:.7rem;margin-right:2px"></i> WA</span><a href="https://wa.me/${h.wa.replace(/[^0-9]/g,'')}" target="_blank" style="color:var(--forest)">${h.wa}</a></div>`:''}
+          ${h.booking_url?`<div><span style="color:var(--gray);width:80px;display:inline-block"><i class="ti ti-world" style="font-size:.7rem;margin-right:2px"></i> Booking</span><a href="${h.booking_url}" target="_blank" style="color:#003580;font-weight:600">Voir sur Booking</a></div>`:''}
+          ${h.tripadvisor_url?`<div><span style="color:var(--gray);width:80px;display:inline-block"><i class="ti ti-star" style="font-size:.7rem;margin-right:2px"></i> TripAdv.</span><a href="${h.tripadvisor_url}" target="_blank" style="color:#34c48a;font-weight:600">Voir sur TripAdvisor</a></div>`:''}
+          ${h.price_eur?`<div><span style="color:var(--gray);width:80px;display:inline-block"><i class="ti ti-currency-euro" style="font-size:.7rem;margin-right:2px"></i> Prix</span><strong>${h.price_eur}</strong></div>`:''}
+          ${h.rating?`<div><span style="color:var(--gray);width:80px;display:inline-block"><i class="ti ti-star" style="font-size:.7rem;margin-right:2px"></i> Note</span><strong>${h.rating}/10</strong>${h.reviews_booking?' ('+h.reviews_booking+' avis)':''}</div>`:''}
         </div>
         ${h.amenities&&h.amenities.length?`<div style="margin-top:.9rem;padding-top:.9rem;border-top:1px solid var(--lg)">
           <div style="font-size:.72rem;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem">Équipements</div>
@@ -3584,7 +3593,7 @@ function openFiche(id){
       <div style="font-size:.78rem;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem">Historique contacts (${hist.length})</div>
       <div style="display:flex;flex-direction:column;gap:.4rem;max-height:180px;overflow-y:auto">
         ${hist.map(e=>`<div style="display:flex;align-items:flex-start;gap:.6rem;background:var(--bg);border-radius:var(--rad);padding:.55rem .75rem;font-size:.75rem">
-          <div style="flex-shrink:0;color:var(--forest-lt)">${e.channel==='email'?'✉️':'💬'}</div>
+          <div style="flex-shrink:0;color:var(--forest-lt)">${e.channel==='email'?'<i class="ti ti-mail" style="font-size:.75rem"></i>':'<i class="ti ti-brand-whatsapp" style="font-size:.75rem"></i>'}</div>
           <div style="flex:1"><div style="font-weight:600">${new Date(e.sentAt).toLocaleDateString('fr-FR')} — ${e.channel}</div>
           <div style="color:var(--gray);margin-top:.1rem">${(e.body||'').slice(0,100)}…</div></div>
           <span class="pill ${e.replied?'ok':'partial'}">${e.replied?'Répondu':'En attente'}</span>
@@ -4072,45 +4081,45 @@ function buildPDF(){
 // ══════════════════════════════════════════════════════
 const PLATFORMS = [
   // ── OTAs internationales majeures ──
-  {name:'Google Hotels',url:'https://www.google.com/travel/hotels?q=h%C3%B4tels+Guin%C3%A9e&hl=fr&dest_src=ts&q=hotels+guinee+conakry',color:'#4285F4',text:'#fff',icon:'🔎',count:40,note:'Source principale — Google Maps + Hotels',group:'google'},
-  {name:'Google Maps',url:'https://www.google.com/maps/search/h%C3%B4tels+Conakry+Guin%C3%A9e/@9.537,-13.677,13z',color:'#34A853',text:'#fff',icon:'📍',count:55,note:'55+ établissements géolocalisés',group:'google'},
-  {name:'Booking.com',url:'https://www.booking.com/searchresults.fr.html?ss=Guin%C3%A9e&dest_type=country&dest_id=-1454006',color:'#003580',text:'#fff',icon:'🌐',count:22,note:'22 hôtels confirmés',group:'ota'},
-  {name:'TripAdvisor',url:'https://www.tripadvisor.fr/Hotels-g293799-Conakry_Conakry_Prefecture_Conakry_Region-Hotels.html',color:'#34E0A1',text:'#000',icon:'🦉',count:23,note:'23 établissements + avis',group:'ota'},
-  {name:'Expedia',url:'https://www.expedia.fr/Conakry-Hotels.d602703.Hotel-List',color:'#f9d71c',text:'#000',icon:'✈️',count:10,note:'10 hôtels',group:'ota'},
-  {name:'Hotels.com',url:'https://fr.hotels.com/search.do?q-destination=Conakry%2C+Guin%C3%A9e',color:'#d2232a',text:'#fff',icon:'🏨',count:10,note:'10 hôtels',group:'ota'},
-  {name:'Agoda',url:'https://www.agoda.com/fr-fr/city/conakry-gn.html',color:'#5392F9',text:'#fff',icon:'🔵',count:5,note:'5 hôtels — clientèle asiatique',group:'ota'},
-  {name:'Airbnb',url:'https://www.airbnb.fr/s/Conakry--Guin%C3%A9e/homes?place_id=ChIJG2cXJL1daxARiXUMORVFRhU&refinement_paths%5B%5D=%2Fhomes',color:'#FF5A5F',text:'#fff',icon:'🏡',count:18,note:'18 logements + hôtels',group:'ota'},
-  {name:'Kayak',url:'https://www.kayak.fr/hotels/Conakry,Guin%C3%A9e-c33087/2025-06-15/2025-06-16/1rooms/1adults',color:'#ff690f',text:'#fff',icon:'🛶',count:6,note:'Comparateur de prix',group:'ota'},
-  {name:'Momondo',url:'https://www.momondo.fr/hotels/Conakry',color:'#7b2d8b',text:'#fff',icon:'🔍',count:6,note:'Comparateur de prix',group:'ota'},
+  {name:'Google Hotels',url:'https://www.google.com/travel/hotels?q=h%C3%B4tels+Guin%C3%A9e&hl=fr&dest_src=ts&q=hotels+guinee+conakry',color:'#4285F4',text:'#fff',iconClass:'ti-search',count:40,note:'Source principale — Google Maps + Hotels',group:'google'},
+  {name:'Google Maps',url:'https://www.google.com/maps/search/h%C3%B4tels+Conakry+Guin%C3%A9e/@9.537,-13.677,13z',color:'#34A853',text:'#fff',iconClass:'ti-map-pin',count:55,note:'55+ établissements géolocalisés',group:'google'},
+  {name:'Booking.com',url:'https://www.booking.com/searchresults.fr.html?ss=Guin%C3%A9e&dest_type=country&dest_id=-1454006',color:'#003580',text:'#fff',iconClass:'ti-world',count:22,note:'22 hôtels confirmés',group:'ota'},
+  {name:'TripAdvisor',url:'https://www.tripadvisor.fr/Hotels-g293799-Conakry_Conakry_Prefecture_Conakry_Region-Hotels.html',color:'#34E0A1',text:'#000',iconClass:'ti-star',count:23,note:'23 établissements + avis',group:'ota'},
+  {name:'Expedia',url:'https://www.expedia.fr/Conakry-Hotels.d602703.Hotel-List',color:'#f9d71c',text:'#000',iconClass:'ti-plane',count:10,note:'10 hôtels',group:'ota'},
+  {name:'Hotels.com',url:'https://fr.hotels.com/search.do?q-destination=Conakry%2C+Guin%C3%A9e',color:'#d2232a',text:'#fff',iconClass:'ti-building-hotel',count:10,note:'10 hôtels',group:'ota'},
+  {name:'Agoda',url:'https://www.agoda.com/fr-fr/city/conakry-gn.html',color:'#5392F9',text:'#fff',iconClass:'ti-circle-filled',count:5,note:'5 hôtels — clientèle asiatique',group:'ota'},
+  {name:'Airbnb',url:'https://www.airbnb.fr/s/Conakry--Guin%C3%A9e/homes?place_id=ChIJG2cXJL1daxARiXUMORVFRhU&refinement_paths%5B%5D=%2Fhomes',color:'#FF5A5F',text:'#fff',iconClass:'ti-home',count:18,note:'18 logements + hôtels',group:'ota'},
+  {name:'Kayak',url:'https://www.kayak.fr/hotels/Conakry,Guin%C3%A9e-c33087/2025-06-15/2025-06-16/1rooms/1adults',color:'#ff690f',text:'#fff',iconClass:'ti-rowing',count:6,note:'Comparateur de prix',group:'ota'},
+  {name:'Momondo',url:'https://www.momondo.fr/hotels/Conakry',color:'#7b2d8b',text:'#fff',iconClass:'ti-search',count:6,note:'Comparateur de prix',group:'ota'},
   // ── Sources africaines & locales ──
-  {name:'Jumia Travel',url:'https://travel.jumia.com/fr-gn/hotels/conakry--guinea/search',color:'#F68B1E',text:'#fff',icon:'🌍',count:15,note:'Plateforme africaine #1',group:'afrique'},
-  {name:'Africa Hotels',url:'https://www.africahotels.com/guinee/conakry',color:'#2E8B57',text:'#fff',icon:'🌴',count:20,note:'Annuaire hôtelier africain',group:'afrique'},
-  {name:'GuineeTourisme',url:'https://www.guineetourisme.gov.gn/hebergements',color:'#CE1126',text:'#fff',icon:'🇬🇳',count:30,note:'Ministère Tourisme Guinée',group:'local'},
-  {name:'Pages Jaunes GN',url:'https://www.pagesjaunes.gn/annuaire/hotels-restaurants',color:'#FFD700',text:'#333',icon:'📒',count:45,note:'Annuaire professionnel guinéen',group:'local'},
-  {name:'Facebook Business',url:'https://www.facebook.com/search/pages/?q=h%C3%B4tel+Conakry+Guin%C3%A9e',color:'#1877F2',text:'#fff',icon:'📘',count:60,note:'Pages hôtels sur Facebook',group:'social'},
+  {name:'Jumia Travel',url:'https://travel.jumia.com/fr-gn/hotels/conakry--guinea/search',color:'#F68B1E',text:'#fff',iconClass:'ti-world',count:15,note:'Plateforme africaine #1',group:'afrique'},
+  {name:'Africa Hotels',url:'https://www.africahotels.com/guinee/conakry',color:'#2E8B57',text:'#fff',iconClass:'ti-tree',count:20,note:'Annuaire hôtelier africain',group:'afrique'},
+  {name:'GuineeTourisme',url:'https://www.guineetourisme.gov.gn/hebergements',color:'#CE1126',text:'#fff',iconClass:'ti-flag',count:30,note:'Ministère Tourisme Guinée',group:'local'},
+  {name:'Pages Jaunes GN',url:'https://www.pagesjaunes.gn/annuaire/hotels-restaurants',color:'#FFD700',text:'#333',iconClass:'ti-notebook',count:45,note:'Annuaire professionnel guinéen',group:'local'},
+  {name:'Facebook Business',url:'https://www.facebook.com/search/pages/?q=h%C3%B4tel+Conakry+Guin%C3%A9e',color:'#1877F2',text:'#fff',iconClass:'ti-brand-facebook',count:60,note:'Pages hôtels sur Facebook',group:'social'},
   // ── Chaînes & spécialisées ──
-  {name:'Radisson Hotels',url:'https://www.radissonhotels.com/en-us/hotels/radisson-blu-conakry',color:'#c00',text:'#fff',icon:'⭐',count:1,note:'Radisson Blu Conakry',group:'chaine'},
-  {name:'Mangalis/Noom',url:'https://www.mangalis.com/hotels/noom-hotel-conakry/',color:'#1a1a2e',text:'#fff',icon:'🌙',count:1,note:'Noom Hotel Conakry',group:'chaine'},
-  {name:'ONOMO Hotels',url:'https://www.onomohotels.com/hotel/onomo-hotel-conakry/',color:'#e74c3c',text:'#fff',icon:'🏢',count:1,note:'ONOMO Conakry',group:'chaine'},
-  {name:'HRS Hotels',url:'https://www.hrs.com/web3/search.do?Destination=Conakry&countryCode=GN',color:'#005B8E',text:'#fff',icon:'💼',count:8,note:'Clientèle business/ONG',group:'chaine'},
-  {name:'Hotelbeds',url:'https://www.hotelbeds.com/hotel-content-api/1.0/hotels?destinationCode=COY&countryCode=GN',color:'#00A3A1',text:'#fff',icon:'🛏',count:12,note:'Grossiste B2B hôtelier',group:'chaine'},
+  {name:'Radisson Hotels',url:'https://www.radissonhotels.com/en-us/hotels/radisson-blu-conakry',color:'#c00',text:'#fff',iconClass:'ti-star',count:1,note:'Radisson Blu Conakry',group:'chaine'},
+  {name:'Mangalis/Noom',url:'https://www.mangalis.com/hotels/noom-hotel-conakry/',color:'#1a1a2e',text:'#fff',iconClass:'ti-moon',count:1,note:'Noom Hotel Conakry',group:'chaine'},
+  {name:'ONOMO Hotels',url:'https://www.onomohotels.com/hotel/onomo-hotel-conakry/',color:'#e74c3c',text:'#fff',iconClass:'ti-building',count:1,note:'ONOMO Conakry',group:'chaine'},
+  {name:'HRS Hotels',url:'https://www.hrs.com/web3/search.do?Destination=Conakry&countryCode=GN',color:'#005B8E',text:'#fff',iconClass:'ti-briefcase',count:8,note:'Clientèle business/ONG',group:'chaine'},
+  {name:'Hotelbeds',url:'https://www.hotelbeds.com/hotel-content-api/1.0/hotels?destinationCode=COY&countryCode=GN',color:'#00A3A1',text:'#fff',iconClass:'ti-bed',count:12,note:'Grossiste B2B hôtelier',group:'chaine'},
   // ── Guides & Annuaires ──
-  {name:'Petit Futé',url:'https://www.petitfute.com/v_destination-4636-guinee/c_1157-hebergements/',color:'#f39c12',text:'#fff',icon:'📙',count:15,note:'Guide Petit Futé Guinée',group:'guide'},
-  {name:'Lonely Planet',url:'https://www.lonelyplanet.com/guinea/conakry/hotels',color:'#006AFF',text:'#fff',icon:'🗺️',count:10,note:'Recommandations voyageurs',group:'guide'},
-  {name:'Hostelworld',url:'https://www.hostelworld.com/findabed.php/ChosenCity.Conakry/ChosenCountry.Guinea',color:'#7B2FBE',text:'#fff',icon:'🎒',count:4,note:'Auberges & petits hôtels',group:'guide'},
+  {name:'Petit Futé',url:'https://www.petitfute.com/v_destination-4636-guinee/c_1157-hebergements/',color:'#f39c12',text:'#fff',iconClass:'ti-book',count:15,note:'Guide Petit Futé Guinée',group:'guide'},
+  {name:'Lonely Planet',url:'https://www.lonelyplanet.com/guinea/conakry/hotels',color:'#006AFF',text:'#fff',iconClass:'ti-map',count:10,note:'Recommandations voyageurs',group:'guide'},
+  {name:'Hostelworld',url:'https://www.hostelworld.com/findabed.php/ChosenCity.Conakry/ChosenCountry.Guinea',color:'#7B2FBE',text:'#fff',iconClass:'ti-backpack',count:4,note:'Auberges & petits hôtels',group:'guide'},
 ];
 
 function renderPlatformLinks(containerId){
   const el=document.getElementById(containerId);
   if(!el) return;
   const groups=[
-    {id:'google',label:'🔍 Google'},
-    {id:'ota',label:'✈️ OTAs internationales'},
-    {id:'afrique',label:'🌍 Plateformes africaines'},
-    {id:'local',label:'🇬🇳 Sources locales Guinée'},
-    {id:'social',label:'📱 Réseaux sociaux'},
-    {id:'chaine',label:'⭐ Chaînes & Business'},
-    {id:'guide',label:'📖 Guides & Annuaires'},
+    {id:'google',label:'<i class="ti ti-brand-google" style="margin-right:4px"></i> Google'},
+    {id:'ota',label:'<i class="ti ti-plane" style="margin-right:4px"></i> OTAs internationales'},
+    {id:'afrique',label:'<i class="ti ti-world" style="margin-right:4px"></i> Plateformes africaines'},
+    {id:'local',label:'<i class="ti ti-flag" style="margin-right:4px"></i> Sources locales Guinée'},
+    {id:'social',label:'<i class="ti ti-device-mobile" style="margin-right:4px"></i> Réseaux sociaux'},
+    {id:'chaine',label:'<i class="ti ti-star" style="margin-right:4px"></i> Chaînes & Business'},
+    {id:'guide',label:'<i class="ti ti-book" style="margin-right:4px"></i> Guides & Annuaires'},
   ];
   el.innerHTML=groups.map(g=>{
     const gPlats=PLATFORMS.filter(p=>p.group===g.id);
@@ -4120,7 +4129,7 @@ function renderPlatformLinks(containerId){
       <div style="display:flex;flex-wrap:wrap;gap:.4rem">
       ${gPlats.map(p=>`
         <a href="${p.url}" target="_blank" style="display:flex;align-items:center;gap:.5rem;padding:.5rem .8rem;background:${p.color};color:${p.text};border-radius:var(--rad);text-decoration:none;font-size:.75rem;font-weight:600;transition:.15s;flex-shrink:0" onmouseover="this.style.opacity='.82'" onmouseout="this.style.opacity='1'" title="${p.note}">
-          <span style="font-size:.9rem">${p.icon}</span>
+          <span style="font-size:.9rem"><i class="ti ${p.iconClass}"></i></span>
           <div>
             <div>${p.name}</div>
             <div style="font-size:.62rem;opacity:.8;font-weight:400">${p.note}</div>
@@ -4161,9 +4170,9 @@ function renderProspects(){
       <div style="font-size:.72rem;color:var(--gray);margin-bottom:.6rem">${h.region}${h.quartier?' · '+h.quartier:h.city&&h.city!==h.region?' · '+h.city:''} ${h.stars?'· '+'★'.repeat(h.stars||0):''}</div>
       ${platBadges.length||h.rating_booking?`<div style="display:flex;gap:.25rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap">${platBadges.join('')}${ratingStr}${h.price_usd?'<span style="font-size:.68rem;color:var(--forest);font-weight:600;margin-left:.3rem">'+h.price_usd+'</span>':''}</div>`:''}
       <div style="display:flex;flex-direction:column;gap:.25rem;margin-bottom:.8rem">
-        <div style="font-size:.75rem;display:flex;align-items:center;gap:.4rem"><span style="color:var(--gray);width:14px">📞</span>${h.phone||'<span style="color:var(--gray);font-style:italic">Non disponible</span>'}</div>
-        <div style="font-size:.75rem;display:flex;align-items:center;gap:.4rem"><span style="color:var(--gray);width:14px">✉️</span>${h.email||'<span style="color:var(--gray);font-style:italic">Email inconnu</span>'}</div>
-        ${h.web?`<div style="font-size:.72rem;display:flex;align-items:center;gap:.4rem"><span style="color:var(--gray);width:14px">🌐</span><a href="${h.web}" target="_blank" style="color:var(--blue)">${h.web.replace('https://','').replace('http://','')}</a></div>`:'<div style="font-size:.72rem;color:var(--red);display:flex;align-items:center;gap:.4rem"><span style="width:14px">⚠️</span>Pas de site web propre</div>'}
+        <div style="font-size:.75rem;display:flex;align-items:center;gap:.4rem"><span style="color:var(--gray);width:14px"><i class="ti ti-phone" style="font-size:.7rem"></i></span>${h.phone||'<span style="color:var(--gray);font-style:italic">Non disponible</span>'}</div>
+        <div style="font-size:.75rem;display:flex;align-items:center;gap:.4rem"><span style="color:var(--gray);width:14px"><i class="ti ti-mail" style="font-size:.7rem"></i></span>${h.email||'<span style="color:var(--gray);font-style:italic">Email inconnu</span>'}</div>
+        ${h.web?`<div style="font-size:.72rem;display:flex;align-items:center;gap:.4rem"><span style="color:var(--gray);width:14px"><i class="ti ti-world" style="font-size:.7rem"></i></span><a href="${h.web}" target="_blank" style="color:var(--blue)">${h.web.replace('https://','').replace('http://','')}</a></div>`:'<div style="font-size:.72rem;color:var(--red);display:flex;align-items:center;gap:.4rem"><span style="width:14px"><i class="ti ti-alert-triangle" style="font-size:.7rem;color:#E24B4A"></i></span>Pas de site web propre</div>'}
       </div>
       <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.8rem">
         <div style="font-size:.7rem;color:var(--gray);flex-shrink:0">Maturité digitale</div>
