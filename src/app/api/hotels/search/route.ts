@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Failed to search for hotels', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Failed to search for hotels' },
       { status: 500 }
     )
   }

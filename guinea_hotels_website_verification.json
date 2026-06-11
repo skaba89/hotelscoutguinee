@@ -1,0 +1,164 @@
+[
+  {
+    "id": 1,
+    "hotel_name": "Hotel Mariador Palace",
+    "location": "Conakry",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "medium",
+    "notes": "Wikipedia references http://www.hotelsmariador.com/ and piaafrica.com lists www.mariadorpalace.com as the hotel's site web, but both domains are currently OFFLINE (connection refused). The hotel may have had a website that is now defunct."
+  },
+  {
+    "id": 2,
+    "hotel_name": "Zambezi Inn Hotel",
+    "location": "Conakry",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "high",
+    "notes": "No official website found. Only appears on booking aggregator sites (booking.com, tripadvisor, expedia, hotels.com, etc.). findhotelswebsite.com lists it under Guinea but does not provide a direct URL."
+  },
+  {
+    "id": 3,
+    "hotel_name": "Sacha Hotel",
+    "location": "Conakry",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "high",
+    "notes": "No official website found. hotelsacha.com is a completely different hotel in Paris, France. The Conakry Sacha Hotel only has a basic Facebook page and booking aggregator listings."
+  },
+  {
+    "id": 4,
+    "hotel_name": "Hotel du Golfe de Guinée",
+    "location": "Conakry",
+    "official_website_found": true,
+    "website_url": "https://hoteldugolfedeguinee.com",
+    "confidence": "high",
+    "notes": "CONFIRMED official website: hoteldugolfedeguinee.com. The site is active and hosted behind a CDN/WAF (returns challenge page to bots). Search results show full hotel content including restaurant, parking, bar, terrace. Email: reservations@hoteldugolfedeguinee.com. Address: Quartier Minière N°313, Dixinn, Conakry."
+  },
+  {
+    "id": 5,
+    "hotel_name": "Oceano Hotel Conakry",
+    "location": "Conakry",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "high",
+    "notes": "No official website found. Only appears on booking aggregator sites. oceanohotel.com is a hotel in Spain, not Guinea. The Conakry Oceano appears to be a small 2-star hotel with no dedicated web presence."
+  },
+  {
+    "id": 6,
+    "hotel_name": "Hotel Golden Plazza Conakry",
+    "location": "Conakry",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "high",
+    "notes": "No official website found. Only appears on booking aggregator sites (hotels.com, tripadvisor, kayak, hotelscombined, hotelsone). 2-star hotel in Kaloum with no dedicated web presence."
+  },
+  {
+    "id": 7,
+    "hotel_name": "Hôtel M'Lys",
+    "location": "Conakry",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "medium",
+    "notes": "Domain hotelmlys.com is REGISTERED but NOT INSTALLED (returns 'Site not installed - OVHcloud' 404 page). The ITU document lists reservation@hotelmlys.com as an email. The hotel has active Facebook (facebook.com/Hotelmlys) and Instagram (@hotelmlys) pages. A website may have existed previously or is planned."
+  },
+  {
+    "id": 8,
+    "hotel_name": "Hôtel Azur Conakry",
+    "location": "Conakry",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "high",
+    "notes": "No official website found. hotelazur.com is a different hotel in Cap d'Agde, France ('Hôtel Azur - Site officiel de l'hôtel - hôtel au Cap d'Agde'). The Conakry Hôtel Azur only appears on booking aggregator sites. Google Hotels snippet incorrectly links to the French hotelazur.com."
+  },
+  {
+    "id": 9,
+    "hotel_name": "Setifana Sea View",
+    "location": "Conakry",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "high",
+    "notes": "No official website found. Only appears on booking aggregator sites. entreprisesguineennes.com references 'hotel-setifana' as a slug but does not provide a direct URL. No setifana.com domain found."
+  },
+  {
+    "id": 10,
+    "hotel_name": "Hakaba",
+    "location": "Conakry",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "high",
+    "notes": "No official website found. Only appears on booking aggregator sites and travel review pages. This is a 2-star guest house in Sonfonia, Conakry with no dedicated web presence."
+  },
+  {
+    "id": 11,
+    "hotel_name": "Pension Les Palmiers",
+    "location": "Conakry",
+    "official_website_found": true,
+    "website_url": "https://www.pensionlespalmiers.com",
+    "confidence": "high",
+    "notes": "CONFIRMED official website: pensionlespalmiers.com. Active WordPress site (Divi theme). SSL certificate has expired but the site is functional. Located in Kipé, Conakry. Beachfront property with pool. Search results show 'Palmiers Pension is the place to stay for a relaxing break after a hectic in downtown Conakry.'"
+  },
+  {
+    "id": 12,
+    "hotel_name": "Chez Sophie",
+    "location": "Conakry",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "high",
+    "notes": "No official website found. chezsophie.gr is a hotel in Santorini, Greece. The Conakry Chez Sophie only appears on booking aggregator sites. Reports indicate the property was closed Nov 2025 - Mar 2026. Very poor reviews."
+  },
+  {
+    "id": 13,
+    "hotel_name": "Kindia Palace Hotel",
+    "location": "Kindia",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "high",
+    "notes": "No official website found. Very limited online presence. No dedicated search results for this specific hotel. Kindia is a smaller city and hotels there generally lack web presence. Mentioned briefly on travelshelper.com alongside other Kindia hotels."
+  },
+  {
+    "id": 14,
+    "hotel_name": "Kankan Prestige Hotel",
+    "location": "Kankan",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "high",
+    "notes": "No official website found. Very limited online presence. No dedicated search results for this specific hotel. Kankan is Guinea's second-largest city but hotel web presence is minimal. No specific hotel listing found beyond generic Kankan hotel directory pages."
+  },
+  {
+    "id": 15,
+    "hotel_name": "Résidence Hôtelière Minière",
+    "location": "Kamsar",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "high",
+    "notes": "No official website found. Search results show 'Residence Schaka Miniere' on wego.com and zenhotels.com which may or may not be the same property. No direct official website found. Kamsar is a small mining town with very limited hotel web presence."
+  },
+  {
+    "id": 16,
+    "hotel_name": "Hotel Particulier HP",
+    "location": "Conakry",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "high",
+    "notes": "No official website found. Only appears on booking aggregator sites (booking.com, tripadvisor, skyscanner, planetofhotels). This is a guest house in Kaloum, Conakry with no dedicated web presence."
+  },
+  {
+    "id": 17,
+    "hotel_name": "Woro Ladia",
+    "location": "Conakry",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "high",
+    "notes": "No official website found. Only appears on booking aggregator sites (booking.com, airbnb, agoda, skyscanner, plannin). This is a guest house in Kipé, Conakry with no dedicated web presence. Listed on Airbnb with individual rooms."
+  },
+  {
+    "id": 18,
+    "hotel_name": "Grand Hôtel de l'Indépendance",
+    "location": "Conakry",
+    "official_website_found": false,
+    "website_url": null,
+    "confidence": "medium",
+    "notes": "French Wikipedia references www.hotelghi.com as the hotel's website, but the domain is currently OFFLINE (connection refused). This was formerly the Novotel GHI. The hotel appears to be in poor condition based on TripAdvisor reviews. A website may have existed previously but is now defunct."
+  }
+]

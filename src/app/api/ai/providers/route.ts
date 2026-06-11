@@ -1,84 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-
-const AI_PROVIDERS = {
-  groq: {
-    id: 'groq',
-    name: 'Groq',
-    free: true,
-    models: 'llama-3.3-70b-versatile',
-    defaultModel: 'llama-3.3-70b-versatile',
-    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
-    keyPrefix: 'gsk_',
-    format: 'openai' as const,
-  },
-  gemini: {
-    id: 'gemini',
-    name: 'Google Gemini',
-    free: true,
-    models: 'gemini-2.0-flash',
-    defaultModel: 'gemini-2.0-flash',
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/',
-    keyPrefix: 'AIza',
-    format: 'gemini' as const,
-  },
-  openrouter: {
-    id: 'openrouter',
-    name: 'OpenRouter',
-    free: true,
-    models: 'meta-llama/llama-3.3-70b-instruct:free',
-    defaultModel: 'meta-llama/llama-3.3-70b-instruct:free',
-    endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-    keyPrefix: 'sk-or-',
-    format: 'openai' as const,
-  },
-  glm5: {
-    id: 'glm5',
-    name: 'GLM-5 (ZhipuAI)',
-    free: true,
-    models: 'glm-4-flash',
-    defaultModel: 'glm-4-flash',
-    endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-    keyPrefix: '',
-    format: 'openai' as const,
-  },
-  deepseek: {
-    id: 'deepseek',
-    name: 'DeepSeek',
-    free: true,
-    models: 'deepseek-chat',
-    defaultModel: 'deepseek-chat',
-    endpoint: 'https://api.deepseek.com/v1/chat/completions',
-    keyPrefix: 'sk-',
-    format: 'openai' as const,
-  },
-  cerebras: {
-    id: 'cerebras',
-    name: 'Cerebras',
-    free: true,
-    models: 'llama-4-scout-17b-16e-instruct',
-    defaultModel: 'llama-4-scout-17b-16e-instruct',
-    endpoint: 'https://api.cerebras.ai/v1/chat/completions',
-    keyPrefix: 'csk-',
-    format: 'openai' as const,
-  },
-  anthropic: {
-    id: 'anthropic',
-    name: 'Anthropic Claude',
-    free: false,
-    models: 'claude-sonnet-4-20250514',
-    defaultModel: 'claude-sonnet-4-20250514',
-    endpoint: 'https://api.anthropic.com/v1/messages',
-    keyPrefix: 'sk-ant-',
-    format: 'anthropic' as const,
-  },
-} as const;
-
-export type AIProviderConfig = (typeof AI_PROVIDERS)[keyof typeof AI_PROVIDERS];
-
-export const PROVIDER_PRIORITY = ['groq', 'gemini', 'deepseek', 'openrouter', 'cerebras', 'glm5', 'anthropic'] as const;
-
-export { AI_PROVIDERS };
+import { AI_PROVIDERS, PROVIDER_PRIORITY } from '@/lib/ai-providers';
+import { encryptApiKey, isEncrypted } from '@/lib/security';
+import { checkRateLimit, RATE_LIMITS, getRateLimitHeaders } from '@/lib/rate-limit';
 
 // GET /api/ai/providers — List all providers with configured status
 export async function GET() {
@@ -119,15 +43,32 @@ export async function GET() {
   }
 }
 
-// POST /api/ai/providers — Save a provider API key
+// POST /api/ai/providers — Save a provider API key (encrypted)
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientId = request.headers.get('x-forwarded-for') || 'unknown';
+    const rateResult = checkRateLimit(`providers:${clientId}`, RATE_LIMITS.write);
+    if (!rateResult.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { providerId, apiKey } = body;
 
     if (!providerId || !apiKey) {
       return NextResponse.json(
         { error: 'providerId and apiKey are required' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof apiKey !== 'string' || apiKey.length > 500) {
+      return NextResponse.json(
+        { error: 'Invalid API key format' },
         { status: 400 }
       );
     }
@@ -140,20 +81,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Optional: validate key prefix if the provider has one
+    // Validate key prefix if the provider has one (fixes M6 — stronger validation)
     if (providerConfig.keyPrefix && !apiKey.startsWith(providerConfig.keyPrefix)) {
       return NextResponse.json(
-        {
-          error: `API key for ${providerConfig.name} should start with "${providerConfig.keyPrefix}"`,
-        },
+        { error: `API key for ${providerConfig.name} should start with "${providerConfig.keyPrefix}"` },
         { status: 400 }
       );
     }
 
+    // Encrypt the API key before storing (fixes C2)
+    const encryptedKey = isEncrypted(apiKey) ? apiKey : encryptApiKey(apiKey);
+
     const saved = await db.aIProvider.upsert({
       where: { providerId },
       update: {
-        apiKey,
+        apiKey: encryptedKey,
         name: providerConfig.name,
         isActive: true,
         updatedAt: new Date(),
@@ -161,7 +103,7 @@ export async function POST(request: NextRequest) {
       create: {
         providerId,
         name: providerConfig.name,
-        apiKey,
+        apiKey: encryptedKey,
         isActive: true,
       },
     });
@@ -173,10 +115,9 @@ export async function POST(request: NextRequest) {
         name: saved.name,
         configured: true,
         isActive: saved.isActive,
-        keyHint:
-          saved.apiKey.length > 8
-            ? saved.apiKey.slice(0, 4) + '••••' + saved.apiKey.slice(-4)
-            : '••••',
+        keyHint: saved.apiKey.length > 8
+          ? saved.apiKey.slice(0, 4) + '••••' + saved.apiKey.slice(-4)
+          : '••••',
       },
     });
   } catch (error) {

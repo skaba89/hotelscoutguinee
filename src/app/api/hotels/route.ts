@@ -1,15 +1,16 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
+import { safeParseInt } from '@/lib/security'
 
 // GET /api/hotels — List hotels with filters and pagination
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
 
-    // Pagination
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)))
+    // Pagination with NaN protection (fixes M2)
+    const page = safeParseInt(searchParams.get('page'), 1, 1, 10000)
+    const limit = safeParseInt(searchParams.get('limit'), 20, 1, 100)
     const skip = (page - 1) * limit
 
     // Filters
@@ -31,12 +32,15 @@ export async function GET(request: NextRequest) {
 
     if (city) where.city = { contains: city }
     if (region) where.region = { contains: region }
-    if (stars) where.stars = parseInt(stars, 10)
+    if (stars) {
+      const starsNum = safeParseInt(stars, 0, 0, 5)
+      if (starsNum > 0) where.stars = starsNum
+    }
     if (priority) where.priority = priority
     if (pipelineStage) where.pipelineStage = pipelineStage
     if (statusDigital) where.statusDigital = statusDigital
     if (hasWeb === 'true') where.web = { not: '' }
-    if (hasWeb === 'false') where.web = ''
+    if (hasWeb === 'false') where.web = { in: ['', 'null'] } // Handle both empty and null (fixes M3)
     if (hasBooking === 'true') where.hasBooking = true
     if (hasBooking === 'false') where.hasBooking = false
     if (hasTripadvisor === 'true') where.hasTripadvisor = true
@@ -150,7 +154,7 @@ export async function POST(request: NextRequest) {
     console.error('[POST /api/hotels]', error)
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       return NextResponse.json(
-        { error: 'Database error', details: error.message },
+        { error: 'Database error' }, // Don't leak error.message (fixes M1)
         { status: 400 }
       )
     }

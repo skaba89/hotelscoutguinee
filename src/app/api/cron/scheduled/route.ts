@@ -38,7 +38,6 @@ export async function POST(request: NextRequest) {
         success: false,
         timestamp: new Date().toISOString(),
         error: 'Scheduled collection failed',
-        details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     )

@@ -1,13 +1,13 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
+import { safeParseInt } from '@/lib/security'
 
-// GET /api/export — Export hotels as CSV
+// GET /api/export — Export hotels as CSV with BOM for Excel UTF-8 compatibility (fixes L3)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
 
-    // Support same filters as the list endpoint for targeted exports
     const city = searchParams.get('city')
     const region = searchParams.get('region')
     const stars = searchParams.get('stars')
@@ -21,7 +21,10 @@ export async function GET(request: NextRequest) {
 
     if (city) where.city = { contains: city }
     if (region) where.region = { contains: region }
-    if (stars) where.stars = parseInt(stars, 10)
+    if (stars) {
+      const starsNum = safeParseInt(stars, 0, 0, 5)
+      if (starsNum > 0) where.stars = starsNum
+    }
     if (priority) where.priority = priority
     if (pipelineStage) where.pipelineStage = pipelineStage
     if (statusDigital) where.statusDigital = statusDigital
@@ -38,9 +41,11 @@ export async function GET(request: NextRequest) {
       ]
     }
 
+    // Limit results for safety (fixes H9 — memory)
     const hotels = await db.hotel.findMany({
       where,
       orderBy: { name: 'asc' },
+      take: 5000,
     })
 
     // Define CSV columns matching the Hotel model
@@ -57,37 +62,26 @@ export async function GET(request: NextRequest) {
       'createdAt', 'updatedAt',
     ] as const
 
-    // Build CSV rows
+    // Build CSV rows with BOM for Excel UTF-8 (fixes L3)
     const headerRow = columns.join(',')
     const dataRows = hotels.map((hotel) => {
       return columns.map((col) => {
         const value = hotel[col as keyof typeof hotel]
 
-        if (value === null || value === undefined) {
-          return ''
-        }
-
-        if (value instanceof Date) {
-          return escapeCsvField(value.toISOString())
-        }
-
-        if (typeof value === 'boolean') {
-          return value ? 'true' : 'false'
-        }
-
-        if (typeof value === 'number') {
-          return String(value)
-        }
+        if (value === null || value === undefined) return ''
+        if (value instanceof Date) return escapeCsvField(value.toISOString())
+        if (typeof value === 'boolean') return value ? 'true' : 'false'
+        if (typeof value === 'number') return String(value)
 
         return escapeCsvField(String(value))
       }).join(',')
     })
 
-    const csv = [headerRow, ...dataRows].join('\n')
+    // UTF-8 BOM prefix for Excel compatibility
+    const csv = '\uFEFF' + [headerRow, ...dataRows].join('\n')
 
-    // Generate filename with timestamp and filter info
     const timestamp = new Date().toISOString().slice(0, 10)
-    const filterParts = []
+    const filterParts: string[] = []
     if (city) filterParts.push(`city-${city}`)
     if (region) filterParts.push(`region-${region}`)
     if (priority) filterParts.push(priority)
@@ -111,10 +105,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * Escape a field value for CSV format (RFC 4180).
- * Wraps in double quotes if the value contains commas, quotes, or newlines.
- */
 function escapeCsvField(value: string): string {
   if (value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r')) {
     return `"${value.replace(/"/g, '""')}"`

@@ -3,6 +3,7 @@
 
 import { db } from '@/lib/db'
 import ZAI from 'z-ai-web-dev-sdk'
+import { validateUrl } from '@/lib/security'
 
 // ─── Helper Utilities ──────────────────────────────────────────────
 
@@ -173,6 +174,20 @@ export async function verifyHotelUrl(
   }
 
   const url = hotel.web
+
+  // SSRF protection (fixes C4)
+  const urlValidation = validateUrl(url)
+  if (!urlValidation.valid) {
+    await db.hotel.update({
+      where: { id: hotel.id },
+      data: { webStatus: 'error', webVerified: false, webVerifiedAt: new Date() },
+    })
+    await db.verificationLog.create({
+      data: { hotelId: hotel.id, url, status: 'error', error: `SSRF blocked: ${urlValidation.reason}` },
+    })
+    return { status: 'error' }
+  }
+
   const startTime = Date.now()
 
   try {
@@ -224,7 +239,7 @@ export async function verifyHotelUrl(
     return { status, statusCode: response.status, responseMs }
   } catch (err: unknown) {
     const responseMs = Date.now() - startTime
-    const isTimeout = err instanceof DOMException && err.name === 'AbortError'
+    const isTimeout = (err instanceof DOMException && err.name === 'AbortError') || (err instanceof Error && err.name === 'AbortError') || (err instanceof Error && err.message?.includes('abort'))
     const errorMessage = err instanceof Error ? err.message : String(err)
     const status = isTimeout ? 'timeout' : 'error'
 
@@ -466,6 +481,7 @@ export async function searchAndAddHotels(
 
   let added = 0
   let duplicates = 0
+  let skipped = 0
 
   const hotelKeywords = [
     'hotel', 'hôtel', 'hostel', 'lodge', 'resort', 'auberge',
@@ -476,7 +492,7 @@ export async function searchAndAddHotels(
     try {
       const hotelName = item.name?.trim()
       if (!hotelName || hotelName.length < 3) {
-        duplicates++ // count unparseable results as skips
+        skipped++ // count unparseable results as skips (fixes L7)
         continue
       }
 
@@ -484,7 +500,7 @@ export async function searchAndAddHotels(
       const lowerName = hotelName.toLowerCase()
       const isHotelRelated = hotelKeywords.some((kw) => lowerName.includes(kw))
       if (!isHotelRelated) {
-        duplicates++
+        skipped++
         continue
       }
 

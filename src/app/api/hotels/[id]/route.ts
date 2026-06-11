@@ -115,7 +115,7 @@ export async function PUT(
         )
       }
       return NextResponse.json(
-        { error: 'Database error', details: error.message },
+        { error: 'Database error' },
         { status: 400 }
       )
     }

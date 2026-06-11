@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { safeParseInt } from '@/lib/security'
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,8 +8,8 @@ export async function GET(request: NextRequest) {
     const hotelId = searchParams.get('hotelId')
     const status = searchParams.get('status')
     const channel = searchParams.get('channel')
-    const limit = parseInt(searchParams.get('limit') ?? '50', 10)
-    const offset = parseInt(searchParams.get('offset') ?? '0', 10)
+    const limit = safeParseInt(searchParams.get('limit'), 50, 1, 200)
+    const offset = safeParseInt(searchParams.get('offset'), 0, 0, 10000)
 
     const where: Record<string, unknown> = {}
     if (hotelId) where.hotelId = hotelId
@@ -20,12 +21,7 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           hotel: {
-            select: {
-              id: true,
-              name: true,
-              city: true,
-              pipelineStage: true,
-            },
+            select: { id: true, name: true, city: true, pipelineStage: true },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -52,22 +48,13 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!hotelId) {
-      return NextResponse.json(
-        { error: 'hotelId is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'hotelId is required' }, { status: 400 })
     }
     if (!channel) {
-      return NextResponse.json(
-        { error: 'channel is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'channel is required' }, { status: 400 })
     }
     if (!direction) {
-      return NextResponse.json(
-        { error: 'direction is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'direction is required' }, { status: 400 })
     }
 
     // Validate channel value
@@ -98,47 +85,43 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify hotel exists
-    const hotel = await db.hotel.findUnique({ where: { id: hotelId } })
-    if (!hotel) {
-      return NextResponse.json(
-        { error: 'Hotel not found' },
-        { status: 404 }
-      )
-    }
+    // Use transaction to prevent race conditions (fixes H4)
+    const contact = await db.$transaction(async (tx) => {
+      // Verify hotel exists within transaction
+      const hotel = await tx.hotel.findUnique({ where: { id: hotelId } })
+      if (!hotel) throw new Error('Hotel not found')
 
-    const contact = await db.contact.create({
-      data: {
-        hotelId,
-        channel,
-        direction,
-        subject: subject ?? null,
-        message: message ?? null,
-        status: contactStatus,
-      },
-      include: {
-        hotel: {
-          select: {
-            id: true,
-            name: true,
-            city: true,
-            pipelineStage: true,
-          },
+      const newContact = await tx.contact.create({
+        data: {
+          hotelId,
+          channel,
+          direction,
+          subject: subject ?? null,
+          message: message ?? null,
+          status: contactStatus,
         },
-      },
-    })
+        include: {
+          hotel: { select: { id: true, name: true, city: true, pipelineStage: true } },
+        },
+      })
 
-    // Update hotel's lastContactAt and contactCount
-    await db.hotel.update({
-      where: { id: hotelId },
-      data: {
-        lastContactAt: new Date(),
-        contactCount: { increment: 1 },
-      },
+      // Update hotel's lastContactAt and contactCount atomically
+      await tx.hotel.update({
+        where: { id: hotelId },
+        data: {
+          lastContactAt: new Date(),
+          contactCount: { increment: 1 },
+        },
+      })
+
+      return newContact
     })
 
     return NextResponse.json({ contact }, { status: 201 })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Hotel not found') {
+      return NextResponse.json({ error: 'Hotel not found' }, { status: 404 })
+    }
     console.error('[Contacts POST] Error:', error)
     return NextResponse.json(
       { error: 'Failed to create contact' },

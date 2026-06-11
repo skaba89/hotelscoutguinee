@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[POST /api/hotels/enrich]', error)
     return NextResponse.json(
-      { error: 'Failed to enrich hotel data', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Failed to enrich hotel data' },
       { status: 500 }
     )
   }

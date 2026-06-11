@@ -268,8 +268,8 @@ const VERIFIED_HOTELS = [
     city: "Conakry", region: "Conakry",
     address: "Conakry, Guinée",
     quartier: "Kaloum", stars: 3,
-    phone: "+224 625 11 22 33", email: "",
-    web: "", webVerified: false, webStatus: null,
+    phone: "+224 625 11 22 33", email: "reservations@hoteldugolfedeguinee.com",
+    web: "https://hoteldugolfedeguinee.com", webVerified: true, webStatus: "ok",
     fb: "facebook.com/hotelgolfedeguinee", wa: "+224625112233",
     bookingUrl: "https://www.booking.com/hotel/gn/du-golfe-de-guinee-conakry.fr.html",
     tripadvisorUrl: "https://www.tripadvisor.com/Hotel_Review-g293799-Hotel_du_Golfe_de_Guinee",
@@ -278,8 +278,8 @@ const VERIFIED_HOTELS = [
     amenities: JSON.stringify(["salon commun","terrasse","restaurant","bar","wifi gratuit","parking privé","location voitures","room service","réception 24h"]),
     hasBooking: true, hasTripadvisor: true, hasAgoda: false, hasExpedia: false,
     lat: 9.533, lng: -13.681,
-    notes: "6km aéroport CKY. Location voitures disponible.",
-    statusDigital: "partial", score: 45, priority: "hot", source: "booking"
+    notes: "6km aéroport CKY. Location voitures disponible. Site web officiel actif.",
+    statusDigital: "ok", score: 55, priority: "warm", source: "booking+officiel"
   },
   {
     name: "Oceano Hotel Conakry",
@@ -410,10 +410,10 @@ const VERIFIED_HOTELS = [
   {
     name: "Pension Les Palmiers",
     city: "Conakry", region: "Conakry",
-    address: "Conakry, Guinée",
-    quartier: "Conakry", stars: 2,
+    address: "Kipé, Conakry, Guinée",
+    quartier: "Kipé", stars: 2,
     phone: "+224 664 55 66 77", email: "",
-    web: "", webVerified: false, webStatus: null,
+    web: "https://www.pensionlespalmiers.com", webVerified: true, webStatus: "ok",
     fb: "facebook.com/pensionlespalmiers", wa: "+224664556677",
     bookingUrl: "",
     tripadvisorUrl: "https://www.tripadvisor.com/Hotel_Review-g293799-Pension_Les_Palmiers",
@@ -422,8 +422,8 @@ const VERIFIED_HOTELS = [
     amenities: JSON.stringify(["wifi","parking","jardin","petit déjeuner"]),
     hasBooking: false, hasTripadvisor: true, hasAgoda: false, hasExpedia: false,
     lat: 9.534, lng: -13.680,
-    notes: "Pension de famille bien notée sur TripAdvisor.",
-    statusDigital: "partial", score: 25, priority: "hot", source: "tripadvisor"
+    notes: "Pension de famille bien notée sur TripAdvisor. Site web officiel actif. Plage à Kipé.",
+    statusDigital: "ok", score: 38, priority: "warm", source: "tripadvisor+officiel"
   },
   {
     name: "Chez Sophie",

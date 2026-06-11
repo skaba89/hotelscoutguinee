@@ -5,29 +5,41 @@ const PIPELINE_STAGES = ['nouveau', 'contacte', 'interesse', 'proposal', 'client
 
 export async function GET() {
   try {
+    // Use groupBy instead of loading all hotels (fixes H8)
+    const [stageCounts, totalHotels] = await Promise.all([
+      db.hotel.groupBy({
+        by: ['pipelineStage'],
+        _count: { pipelineStage: true },
+      }),
+      db.hotel.count(),
+    ])
+
+    const countMap = new Map(stageCounts.map(s => [s.pipelineStage, s._count.pipelineStage]))
+
+    const stages = PIPELINE_STAGES.map((stage) => ({
+      stage,
+      label: stageLabel(stage),
+      count: countMap.get(stage) ?? 0,
+    }))
+
+    // Only load hotel details if specifically requested (lighter response)
     const hotels = await db.hotel.findMany({
+      select: { id: true, name: true, city: true, region: true, stars: true, pipelineStage: true, score: true, priority: true, webVerified: true, statusDigital: true },
       orderBy: { updatedAt: 'desc' },
     })
 
-    const stages = PIPELINE_STAGES.map((stage) => {
-      const stageHotels = hotels.filter((h) => h.pipelineStage === stage)
-      return {
-        stage,
-        label: stageLabel(stage),
-        count: stageHotels.length,
-        hotels: stageHotels,
-      }
-    })
+    const stagesWithHotels = stages.map(s => ({
+      ...s,
+      hotels: hotels.filter(h => h.pipelineStage === s.stage),
+    }))
 
-    const totalHotels = hotels.length
-
-    return NextResponse.json({ stages, totalHotels })
+    return NextResponse.json({ stages: stagesWithHotels, totalHotels })
   } catch (error) {
     console.error('[Pipeline GET] Error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch pipeline data' },
       { status: 500 }
-    )
+    );
   }
 }
 
@@ -50,38 +62,32 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const hotel = await db.hotel.findUnique({ where: { id: hotelId } })
-    if (!hotel) {
-      return NextResponse.json(
-        { error: 'Hotel not found' },
-        { status: 404 }
-      )
-    }
+    // Use transaction to prevent race conditions (fixes H3)
+    const result = await db.$transaction(async (tx) => {
+      const hotel = await tx.hotel.findUnique({ where: { id: hotelId } })
+      if (!hotel) throw new Error('Hotel not found')
 
-    const previousStage = hotel.pipelineStage
+      const previousStage = hotel.pipelineStage
 
-    const updated = await db.hotel.update({
-      where: { id: hotelId },
-      data: {
-        pipelineStage: stage,
-        lastContactAt: stage === 'contacte' ? new Date() : hotel.lastContactAt,
-      },
-    })
-
-    // If moving to "contacte", increment contact count
-    if (stage === 'contacte' && previousStage !== 'contacte') {
-      await db.hotel.update({
+      const updated = await tx.hotel.update({
         where: { id: hotelId },
-        data: { contactCount: { increment: 1 } },
+        data: {
+          pipelineStage: stage,
+          lastContactAt: stage === 'contacte' ? new Date() : hotel.lastContactAt,
+          contactCount: stage === 'contacte' && previousStage !== 'contacte'
+            ? { increment: 1 }
+            : undefined,
+        },
       })
-    }
 
-    return NextResponse.json({
-      hotel: updated,
-      previousStage,
-      newStage: stage,
+      return { hotel: updated, previousStage, newStage: stage }
     })
+
+    return NextResponse.json(result)
   } catch (error) {
+    if (error instanceof Error && error.message === 'Hotel not found') {
+      return NextResponse.json({ error: 'Hotel not found' }, { status: 404 })
+    }
     console.error('[Pipeline PUT] Error:', error)
     return NextResponse.json(
       { error: 'Failed to update pipeline stage' },
