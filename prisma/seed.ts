@@ -161,7 +161,7 @@ const VERIFIED_HOTELS = [
     address: "Municipality of Kaloum, Conakry",
     quartier: "Kaloum", stars: 4,
     phone: "+224 622 45 45 45", email: "",
-    web: "", webVerified: false, webStatus: null,
+    web: "https://hotelpetitbateau.com", webVerified: true, webStatus: "ok",
     fb: "facebook.com/hotelpetitbateauconakry", wa: "+224622454545",
     bookingUrl: "https://www.booking.com/hotel/gn/petit-bateau-conakry.fr.html",
     tripadvisorUrl: "https://www.tripadvisor.com/Hotel_Review-g293799-Hotel_Petit_Bateau",
@@ -171,7 +171,7 @@ const VERIFIED_HOTELS = [
     hasBooking: true, hasTripadvisor: true, hasAgoda: false, hasExpedia: true,
     lat: 9.531, lng: -13.681,
     notes: "Centre Kaloum. Quartier diplomatique.",
-    statusDigital: "partial", score: 65, priority: "hot", source: "booking"
+    statusDigital: "ok", score: 80, priority: "warm", source: "booking+officiel"
   },
   {
     name: "Hotel Mariador Palace",
@@ -197,7 +197,7 @@ const VERIFIED_HOTELS = [
     address: "6ème Boulevard, Kaloum, Conakry",
     quartier: "Kaloum", stars: 3,
     phone: "+224 664 80 80 80", email: "",
-    web: "", webVerified: false, webStatus: null,
+    web: "https://ghc-guinee.com", webVerified: true, webStatus: "ok",
     fb: "facebook.com/ghcconakry", wa: "+224664808080",
     bookingUrl: "https://www.booking.com/hotel/gn/grand-hotel-central-conakry.fr.html",
     tripadvisorUrl: "https://www.tripadvisor.com/Hotel_Review-g293799-Grand_Hotel_Central_GHC",
@@ -207,7 +207,7 @@ const VERIFIED_HOTELS = [
     hasBooking: true, hasTripadvisor: true, hasAgoda: false, hasExpedia: true,
     lat: 9.535, lng: -13.679,
     notes: "Vue panoramique depuis le rooftop. Très bien noté. Centre Kaloum.",
-    statusDigital: "partial", score: 58, priority: "hot", source: "booking"
+    statusDigital: "ok", score: 78, priority: "warm", source: "booking+officiel"
   },
   {
     name: "Riviera Taouyah Hotel",
@@ -215,7 +215,7 @@ const VERIFIED_HOTELS = [
     address: "Taouyah Corniche, Conakry",
     quartier: "Taouyah", stars: 3,
     phone: "+224 622 90 90 90", email: "",
-    web: "", webVerified: false, webStatus: null,
+    web: "https://www.rivierataouyahhotel.com", webVerified: true, webStatus: "ok",
     fb: "facebook.com/rivierataouyahhotel", wa: "+224622909090",
     bookingUrl: "https://www.booking.com/hotel/gn/riviera-taouyah.fr.html",
     tripadvisorUrl: "https://www.tripadvisor.com/Hotel_Review-g293799-Riviera_Taouyah_Hotel",
@@ -225,7 +225,7 @@ const VERIFIED_HOTELS = [
     hasBooking: true, hasTripadvisor: true, hasAgoda: false, hasExpedia: true,
     lat: 9.562, lng: -13.648,
     notes: "Sur la corniche Taouyah. Frère du Riviera Royal.",
-    statusDigital: "partial", score: 55, priority: "hot", source: "booking"
+    statusDigital: "ok", score: 75, priority: "warm", source: "booking+officiel"
   },
   {
     name: "Zambezi Inn Hotel",
@@ -359,7 +359,7 @@ const VERIFIED_HOTELS = [
     address: "Conakry, Guinée",
     quartier: "Conakry", stars: 3,
     phone: "+224 664 10 20 30", email: "millenium@orange.gn",
-    web: "", webVerified: false, webStatus: null,
+    web: "https://milleniumsuites.com", webVerified: true, webStatus: "ok",
     fb: "", wa: "+224664102030",
     bookingUrl: "",
     tripadvisorUrl: "https://www.tripadvisor.com/Hotel_Review-g293799-Hotel_Millenium",
@@ -368,8 +368,8 @@ const VERIFIED_HOTELS = [
     amenities: JSON.stringify(["restaurant","wifi","climatisation","parking"]),
     hasBooking: false, hasTripadvisor: true, hasAgoda: false, hasExpedia: false,
     lat: 9.536, lng: -13.679,
-    notes: "Présent sur TripAdvisor uniquement.",
-    statusDigital: "partial", score: 32, priority: "hot", source: "tripadvisor"
+    notes: "Site web officiel : milleniumsuites.com. Présent sur TripAdvisor.",
+    statusDigital: "ok", score: 52, priority: "warm", source: "tripadvisor+officiel"
   },
   {
     name: "Setifana Sea View",
@@ -449,7 +449,7 @@ const VERIFIED_HOTELS = [
     address: "Labé, Guinée",
     quartier: "Labé", stars: 2,
     phone: "+224 655 30 40 50", email: "hoteltata.labe@gmail.com",
-    web: "", webVerified: false, webStatus: null,
+    web: "https://www.hoteltataguinea.com", webVerified: true, webStatus: "ok",
     fb: "facebook.com/hoteltatadjalon", wa: "+224655304050",
     bookingUrl: "",
     tripadvisorUrl: "https://www.tripadvisor.com/Hotel_Review-g789353-Hotel_Tata_Djamtum-Labe",
@@ -458,16 +458,16 @@ const VERIFIED_HOTELS = [
     amenities: JSON.stringify(["restaurant","bière fraîche","cases confortables","courant électrique","wifi"]),
     hasBooking: false, hasTripadvisor: true, hasAgoda: false, hasExpedia: false,
     lat: 11.3214, lng: -12.2856,
-    notes: "Avis TripAdvisor: impossible de faire mieux à Labé. Courant et wifi disponibles.",
-    statusDigital: "partial", score: 20, priority: "hot", source: "tripadvisor"
+    notes: "Avis TripAdvisor: impossible de faire mieux à Labé. Courant et wifi disponibles. Site web officiel.",
+    statusDigital: "ok", score: 40, priority: "warm", source: "tripadvisor+officiel"
   },
   {
     name: "Hôtel le Rocher",
-    city: "Mamou", region: "Mamou",
-    address: "Mamou, Guinée",
-    quartier: "Mamou", stars: 2,
+    city: "Conakry", region: "Conakry",
+    address: "Sandervalia, Kaloum, Conakry",
+    quartier: "Kaloum", stars: 2,
     phone: "+224 622 40 50 60", email: "",
-    web: "", webVerified: false, webStatus: null,
+    web: "https://hotel-rocher.com", webVerified: true, webStatus: "ok",
     fb: "", wa: "+224622405060",
     bookingUrl: "",
     tripadvisorUrl: "https://www.tripadvisor.com/Hotel_Review-g293799-Hotel_le_Rocher",
@@ -476,8 +476,8 @@ const VERIFIED_HOTELS = [
     amenities: JSON.stringify(["restaurant","wifi"]),
     hasBooking: false, hasTripadvisor: false, hasAgoda: false, hasExpedia: false,
     lat: 10.376, lng: -12.091,
-    notes: "Hôtel mentionné dans les annuaires locaux.",
-    statusDigital: "none", score: 15, priority: "hot", source: "annuaire"
+    notes: "Hôtel Le Rocher, Sandervalia Kaloum Conakry. Site web officiel actif.",
+    statusDigital: "ok", score: 35, priority: "warm", source: "officiel"
   },
   {
     name: "Kindia Palace Hotel",

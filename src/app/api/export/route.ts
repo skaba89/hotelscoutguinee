@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
     // Build where clause
     const where: Prisma.HotelWhereInput = {}
 
-    if (city) where.city = { contains: city, mode: 'insensitive' }
-    if (region) where.region = { contains: region, mode: 'insensitive' }
+    if (city) where.city = { contains: city }
+    if (region) where.region = { contains: region }
     if (stars) where.stars = parseInt(stars, 10)
     if (priority) where.priority = priority
     if (pipelineStage) where.pipelineStage = pipelineStage
@@ -28,13 +28,13 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { city: { contains: search, mode: 'insensitive' } },
-        { region: { contains: search, mode: 'insensitive' } },
-        { address: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { web: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search } },
+        { city: { contains: search } },
+        { region: { contains: search } },
+        { address: { contains: search } },
+        { phone: { contains: search } },
+        { email: { contains: search } },
+        { web: { contains: search } },
       ]
     }
 

@@ -29,14 +29,14 @@ export async function GET(request: NextRequest) {
     // Build where clause
     const where: Prisma.HotelWhereInput = {}
 
-    if (city) where.city = { contains: city, mode: 'insensitive' }
-    if (region) where.region = { contains: region, mode: 'insensitive' }
+    if (city) where.city = { contains: city }
+    if (region) where.region = { contains: region }
     if (stars) where.stars = parseInt(stars, 10)
     if (priority) where.priority = priority
     if (pipelineStage) where.pipelineStage = pipelineStage
     if (statusDigital) where.statusDigital = statusDigital
-    if (hasWeb === 'true') where.web = { not: null }
-    if (hasWeb === 'false') where.web = null
+    if (hasWeb === 'true') where.web = { not: '' }
+    if (hasWeb === 'false') where.web = ''
     if (hasBooking === 'true') where.hasBooking = true
     if (hasBooking === 'false') where.hasBooking = false
     if (hasTripadvisor === 'true') where.hasTripadvisor = true
@@ -44,13 +44,13 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { city: { contains: search, mode: 'insensitive' } },
-        { region: { contains: search, mode: 'insensitive' } },
-        { address: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { web: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search } },
+        { city: { contains: search } },
+        { region: { contains: search } },
+        { address: { contains: search } },
+        { phone: { contains: search } },
+        { email: { contains: search } },
+        { web: { contains: search } },
       ]
     }
 

@@ -273,7 +273,7 @@ export async function verifyAllUrls(): Promise<{
 
   const hotels = await db.hotel.findMany({
     where: {
-      web: { not: null },
+      web: { not: '' },
       OR: [
         { webVerifiedAt: null },
         { webVerifiedAt: { lt: sevenDaysAgo } },
