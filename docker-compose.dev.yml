@@ -1,0 +1,60 @@
+# ============================================================
+# HotelScout Guinea — Docker Compose (Development)
+# Hot-reload + Prisma Studio for local development
+# ============================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: hotelscout-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=file:/app/data/hotelscout.db
+      - NODE_ENV=development
+      - PORT=3000
+      - WATCHPACK_POLLING=true
+    volumes:
+      # Mount source code for hot-reload
+      - ./src:/app/src:ro
+      - ./public:/app/public:ro
+      - ./prisma:/app/prisma:ro
+      # Persistent SQLite database
+      - hotelscout-dev-data:/app/data
+      # Persist node_modules (don't overwrite with host)
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    networks:
+      - hotelscout-dev-net
+
+  prisma-studio:
+    image: node:22-alpine
+    container_name: hotelscout-prisma-studio
+    restart: unless-stopped
+    working_dir: /app
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=file:/app/data/hotelscout.db
+    volumes:
+      - ./prisma:/app/prisma:ro
+      - hotelscout-dev-data:/app/data
+    command: npx prisma studio --port 5555 --hostname 0.0.0.0
+    ports:
+      - "5555:5555"
+    networks:
+      - hotelscout-dev-net
+    depends_on:
+      - app
+
+volumes:
+  hotelscout-dev-data:
+    driver: local
+
+networks:
+  hotelscout-dev-net:
+    driver: bridge

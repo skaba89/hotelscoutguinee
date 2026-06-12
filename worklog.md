@@ -60,3 +60,36 @@ Stage Summary:
 - API key encryption, SSRF protection, rate limiting, CORS all implemented
 - TypeScript strict mode enabled and passing
 - Audit PDF: /home/z/my-project/download/hotelscout-guinea-audit-e2e.pdf
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Dockeriser l'application HotelScout Guinea pour déploiement simplifié et multiplateforme
+
+Work Log:
+- Créé Dockerfile multi-stage optimisé (deps → builder → runner)
+  - Stage deps : installation des dépendances avec bun
+  - Stage builder : Prisma generate + Next.js build standalone
+  - Stage runner : Alpine minimal + sqlite3, utilisateur non-root, health check
+- Créé .dockerignore pour exclure fichiers inutiles du build context
+- Créé docker-compose.yml production (app + Caddy reverse proxy)
+  - Volume persistant hotelscout-data pour la base SQLite
+  - Health check sur /api/stats
+  - Caddy avec ports 80/443
+- Créé docker-compose.dev.yml développement (hot-reload + Prisma Studio)
+  - Dockerfile.dev séparé avec volume mounts pour src/
+  - Prisma Studio sur port 5555
+- Créé docker-entrypoint.sh
+  - Vérifie/crée le répertoire data
+  - Lance prisma db push au démarrage
+  - Seed automatique si la base est vide
+- Mis à jour le Caddyfile pour utiliser la variable CADDY_UPSTREAM (Docker-compatible)
+- Créé .env.example documentant toutes les variables
+- Créé docker-helper.sh avec commandes : build, up, dev, down, logs, shell, backup, restore, status, clean
+- Ajouté scripts Docker et prisma.seed dans package.json
+
+Stage Summary:
+- 8 fichiers créés : Dockerfile, Dockerfile.dev, docker-compose.yml, docker-compose.dev.yml, .dockerignore, .env.example, docker-entrypoint.sh, docker-helper.sh
+- 2 fichiers modifiés : Caddyfile (Docker-compatible), package.json (scripts Docker + prisma seed)
+- Architecture : multi-stage build (~200MB image finale), utilisateur non-root, volume persistant, health check
+- Déploiement : `./docker-helper.sh up` ou `docker compose up -d`

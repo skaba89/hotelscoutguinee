@@ -1,23 +1,36 @@
-:81 {
-	@transform_port_query {
-		query XTransformPort=*
-	}
+# ============================================================
+# HotelScout Guinea — Caddyfile
+# Works both in Docker (container names) and standalone (localhost)
+# ============================================================
 
-	handle @transform_port_query {
-		reverse_proxy localhost:{query.XTransformPort} {
-			header_up Host {host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
-			header_up X-Real-IP {remote_host}
-		}
-	}
+# ── Production (Docker) ───────────────────────────────────
+# Replace :80 with your domain for automatic HTTPS:
+#   hotelscout-gn.com {
+#     ...
+#   }
 
-	handle {
-		reverse_proxy localhost:3000 {
-			header_up Host {host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
-			header_up X-Real-IP {remote_host}
-		}
-	}
+:80 {
+        @transform_port_query {
+                query XTransformPort=*
+        }
+
+        handle @transform_port_query {
+                # In Docker, use the service name "app"
+                # Standalone: replace "app" with "localhost"
+                reverse_proxy {$CADDY_UPSTREAM:app}:{query.XTransformPort} {
+                        header_up Host {host}
+                        header_up X-Forwarded-For {remote_host}
+                        header_up X-Forwarded-Proto {scheme}
+                        header_up X-Real-IP {remote_host}
+                }
+        }
+
+        handle {
+                reverse_proxy {$CADDY_UPSTREAM:app}:3000 {
+                        header_up Host {host}
+                        header_up X-Forwarded-For {remote_host}
+                        header_up X-Forwarded-Proto {scheme}
+                        header_up X-Real-IP {remote_host}
+                }
+        }
 }
