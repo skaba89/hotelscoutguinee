@@ -1,0 +1,2204 @@
+     1→'use client'
+     2→
+     3→import React, { useState, useEffect, useCallback, useRef } from 'react'
+     4→import { useToast } from '@/hooks/use-toast'
+     5→import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+     6→import { Button } from '@/components/ui/button'
+     7→import { Badge } from '@/components/ui/badge'
+     8→import { Input } from '@/components/ui/input'
+     9→import { Label } from '@/components/ui/label'
+    10→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+    11→import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+    12→import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+    13→import { Progress } from '@/components/ui/progress'
+    14→import { Separator } from '@/components/ui/separator'
+    15→import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+    16→import { ScrollArea } from '@/components/ui/scroll-area'
+    17→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    18→import { Textarea } from '@/components/ui/textarea'
+    19→import { Switch } from '@/components/ui/switch'
+    20→import { Skeleton } from '@/components/ui/skeleton'
+    21→import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+    22→import {
+    23→  LayoutDashboard, Building2, Search, Flame, GitBranch, Brain, Settings,
+    24→  Menu, Download, ExternalLink, Globe, Phone, Mail, Star, MapPin,
+    25→  RefreshCw, Plus, Trash2, Edit, ChevronLeft, ChevronRight, CheckCircle2,
+    26→  XCircle, Clock, AlertTriangle, Zap, MessageSquare, Send, Bot,
+    27→  ArrowRight, ArrowUpRight, TrendingUp, Users, Eye, Link2, Wifi,
+    28→  WifiOff, Filter, SortAsc, SortDesc, Play, Loader2, X, Check,
+    29→  Copy, Sparkles, ChevronDown, Info
+    30→} from 'lucide-react'
+    31→
+    32→// ============================================================================
+    33→// TYPES
+    34→// ============================================================================
+    35→
+    36→interface Hotel {
+    37→  id: string
+    38→  name: string
+    39→  city: string
+    40→  region: string
+    41→  address: string | null
+    42→  quartier: string | null
+    43→  stars: number
+    44→  phone: string | null
+    45→  email: string | null
+    46→  web: string | null
+    47→  webVerified: boolean
+    48→  webVerifiedAt: string | null
+    49→  webStatus: string | null
+    50→  fb: string | null
+    51→  wa: string | null
+    52→  bookingUrl: string | null
+    53→  tripadvisorUrl: string | null
+    54→  ratingBooking: number
+    55→  reviewsBooking: number
+    56→  ratingTripadvisor: number
+    57→  reviewsTripadvisor: number
+    58→  priceUsd: string | null
+    59→  rooms: number
+    60→  amenities: string | null
+    61→  hasBooking: boolean
+    62→  hasTripadvisor: boolean
+    63→  hasAgoda: boolean
+    64→  hasExpedia: boolean
+    65→  lat: number | null
+    66→  lng: number | null
+    67→  notes: string | null
+    68→  statusDigital: string
+    69→  score: number
+    70→  priority: string
+    71→  source: string | null
+    72→  pipelineStage: string
+    73→  lastContactAt: string | null
+    74→  contactCount: number
+    75→  createdAt: string
+    76→  updatedAt: string
+    77→  _count?: { contacts: number; aiAnalyses: number; verificationLogs: number }
+    78→  contacts?: Contact[]
+    79→  aiAnalyses?: AIAnalysis[]
+    80→  verificationLogs?: VerificationLog[]
+    81→}
+    82→
+    83→interface Contact {
+    84→  id: string
+    85→  hotelId: string
+    86→  channel: string
+    87→  direction: string
+    88→  subject: string | null
+    89→  message: string | null
+    90→  status: string
+    91→  sentAt: string
+    92→  createdAt: string
+    93→  hotel?: { id: string; name: string; city: string; pipelineStage: string }
+    94→}
+    95→
+    96→interface AIAnalysis {
+    97→  id: string
+    98→  hotelId: string
+    99→  providerId: string
+   100→  prompt: string
+   101→  response: string
+   102→  createdAt: string
+   103→}
+   104→
+   105→interface VerificationLog {
+   106→  id: string
+   107→  hotelId: string
+   108→  url: string
+   109→  status: string
+   110→  statusCode: number | null
+   111→  responseMs: number | null
+   112→  error: string | null
+   113→  checkedAt: string
+   114→}
+   115→
+   116→interface AIProvider {
+   117→  id: string
+   118→  name: string
+   119→  free: boolean
+   120→  models: string
+   121→  defaultModel: string
+   122→  keyPrefix: string
+   123→  format: string
+   124→  configured: boolean
+   125→  isActive: boolean
+   126→  lastUsedAt: string | null
+   127→  keyHint: string | null
+   128→}
+   129→
+   130→interface Stats {
+   131→  totalHotels: number
+   132→  byRegion: Record<string, number>
+   133→  byDigitalStatus: Record<string, number>
+   134→  averageScore: number
+   135→  pipelineDistribution: Record<string, number>
+   136→  priorityDistribution: Record<string, number>
+   137→  recentContactsCount: number
+   138→  totalContacts: number
+   139→  digitalReadiness: number
+   140→  hotelsWithWebsite: number
+   141→  hotelsWithPhone: number
+   142→  hotelsWithEmail: number
+   143→  lastUpdated: string
+   144→}
+   145→
+   146→interface PipelineStage {
+   147→  stage: string
+   148→  label: string
+   149→  count: number
+   150→  hotels: Hotel[]
+   151→}
+   152→
+   153→type PageType = 'dashboard' | 'hotels' | 'collecte' | 'prospects' | 'pipeline' | 'ia' | 'settings'
+   154→
+   155→// ============================================================================
+   156→// CONSTANTS
+   157→// ============================================================================
+   158→
+   159→const PAGE_LABELS: Record<PageType, string> = {
+   160→  dashboard: 'Tableau de bord',
+   161→  hotels: 'Base Hôtels',
+   162→  collecte: 'Agent de Collecte',
+   163→  prospects: 'Prospects HOT',
+   164→  pipeline: 'Pipeline CRM',
+   165→  ia: 'Analyse IA',
+   166→  settings: 'Paramètres',
+   167→}
+   168→
+   169→const PAGE_ICONS: Record<PageType, React.ElementType> = {
+   170→  dashboard: LayoutDashboard,
+   171→  hotels: Building2,
+   172→  collecte: Search,
+   173→  prospects: Flame,
+   174→  pipeline: GitBranch,
+   175→  ia: Brain,
+   176→  settings: Settings,
+   177→}
+   178→
+   179→const STAGE_LABELS: Record<string, string> = {
+   180→  nouveau: 'Nouveau',
+   181→  contacte: 'Contacté',
+   182→  interesse: 'Intéressé',
+   183→  proposal: 'Proposition',
+   184→  client: 'Client',
+   185→}
+   186→
+   187→const STAGE_COLORS: Record<string, string> = {
+   188→  nouveau: 'bg-slate-100 text-slate-700 border-slate-300',
+   189→  contacte: 'bg-blue-50 text-blue-700 border-blue-300',
+   190→  interesse: 'bg-amber-50 text-amber-700 border-amber-300',
+   191→  proposal: 'bg-purple-50 text-purple-700 border-purple-300',
+   192→  client: 'bg-emerald-50 text-emerald-700 border-emerald-300',
+   193→}
+   194→
+   195→const PRIORITY_COLORS: Record<string, string> = {
+   196→  hot: 'bg-red-100 text-red-700 border-red-300',
+   197→  warm: 'bg-amber-100 text-amber-700 border-amber-300',
+   198→  cold: 'bg-slate-100 text-slate-600 border-slate-300',
+   199→}
+   200→
+   201→const DIGITAL_STATUS_COLORS: Record<string, string> = {
+   202→  ok: 'bg-emerald-100 text-emerald-700',
+   203→  partial: 'bg-amber-100 text-amber-700',
+   204→  none: 'bg-red-100 text-red-700',
+   205→}
+   206→
+   207→const DIGITAL_STATUS_LABELS: Record<string, string> = {
+   208→  ok: 'Complet',
+   209→  partial: 'Partiel',
+   210→  none: 'Aucun',
+   211→}
+   212→
+   213→const AI_PROMPT_TEMPLATES = [
+   214→  { id: 'digital', label: 'Analyse digitale', icon: Wifi, prompt: 'Analyse la présence digitale de cet hôtel en Guinée. Évalue son site web, ses plateformes de réservation, et propose des améliorations concrètes pour augmenter sa visibilité en ligne.' },
+   215→  { id: 'prospect', label: 'Message de prospection', icon: Send, prompt: 'Rédige un message de prospection professionnel et personnalisé pour cet hôtel en Guinée, en proposant nos services de création de site web et de présence digitale. Le ton doit être chaleureux mais professionnel.' },
+   216→  { id: 'audit', label: 'Audit concurrentiel', icon: Eye, prompt: 'Réalise un audit concurrentiel pour cet hôtel en Guinée. Compare sa présence digitale avec les standards de l\'industrie hôtelière en Afrique de l\'Ouest et identifie les opportunités d\'amélioration.' },
+   217→]
+   218→
+   219→// ============================================================================
+   220→// UTILITY FUNCTIONS
+   221→// ============================================================================
+   222→
+   223→function formatNumber(n: number): string {
+   224→  return new Intl.NumberFormat('fr-FR').format(n)
+   225→}
+   226→
+   227→function formatDate(d: string | null | undefined): string {
+   228→  if (!d) return '—'
+   229→  return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(d))
+   230→}
+   231→
+   232→function formatDateTime(d: string | null | undefined): string {
+   233→  if (!d) return '—'
+   234→  return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(d))
+   235→}
+   236→
+   237→function getScoreColor(score: number): string {
+   238→  if (score >= 60) return 'text-emerald-600'
+   239→  if (score >= 30) return 'text-amber-600'
+   240→  return 'text-red-600'
+   241→}
+   242→
+   243→function getScoreBg(score: number): string {
+   244→  if (score >= 60) return 'bg-emerald-500'
+   245→  if (score >= 30) return 'bg-amber-500'
+   246→  return 'bg-red-500'
+   247→}
+   248→
+   249→// ============================================================================
+   250→// SKELETON LOADER COMPONENT
+   251→// ============================================================================
+   252→
+   253→function CardSkeleton() {
+   254→  return (
+   255→    <Card>
+   256→      <CardHeader className="pb-2">
+   257→        <Skeleton className="h-4 w-24" />
+   258→      </CardHeader>
+   259→      <CardContent>
+   260→        <Skeleton className="h-8 w-16 mb-1" />
+   261→        <Skeleton className="h-3 w-32" />
+   262→      </CardContent>
+   263→    </Card>
+   264→  )
+   265→}
+   266→
+   267→function TableSkeleton({ rows = 5 }: { rows?: number }) {
+   268→  return (
+   269→    <div className="space-y-3">
+   270→      {Array.from({ length: rows }).map((_, i) => (
+   271→        <div key={i} className="flex gap-4">
+   272→          <Skeleton className="h-4 w-40" />
+   273→          <Skeleton className="h-4 w-20" />
+   274→          <Skeleton className="h-4 w-16" />
+   275→          <Skeleton className="h-4 w-24" />
+   276→          <Skeleton className="h-4 w-20" />
+   277→        </div>
+   278→      ))}
+   279→    </div>
+   280→  )
+   281→}
+   282→
+   283→// ============================================================================
+   284→// SIDEBAR COMPONENT
+   285→// ============================================================================
+   286→
+   287→function Sidebar({
+   288→  activePage,
+   289→  onPageChange,
+   290→  collapsed,
+   291→  onToggle,
+   292→}: {
+   293→  activePage: PageType
+   294→  onPageChange: (p: PageType) => void
+   295→  collapsed: boolean
+   296→  onToggle: () => void
+   297→}) {
+   298→  const pages: PageType[] = ['dashboard', 'hotels', 'collecte', 'prospects', 'pipeline', 'ia', 'settings']
+   299→
+   300→  return (
+   301→    <aside
+   302→      className={`${collapsed ? 'w-16' : 'w-60'} bg-sidebar text-sidebar-foreground flex flex-col transition-all duration-300 border-r border-sidebar-border shrink-0`}
+   303→    >
+   304→      {/* Logo */}
+   305→      <div className="h-14 flex items-center gap-2 px-3 border-b border-sidebar-border">
+   306→        <div className="w-8 h-8 rounded-lg bg-guinea-gold flex items-center justify-center text-sidebar-primary-foreground font-bold text-sm shrink-0">
+   307→          HS
+   308→        </div>
+   309→        {!collapsed && (
+   310→          <div className="overflow-hidden">
+   311→            <div className="font-bold text-sm truncate">HotelScout</div>
+   312→            <div className="text-[10px] text-sidebar-foreground/60 truncate">Guinée v7</div>
+   313→          </div>
+   314→        )}
+   315→        <Button
+   316→          variant="ghost"
+   317→          size="icon"
+   318→          className="ml-auto text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent h-7 w-7"
+   319→          onClick={onToggle}
+   320→        >
+   321→          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+   322→        </Button>
+   323→      </div>
+   324→
+   325→      {/* Nav */}
+   326→      <nav className="flex-1 py-2 px-2 space-y-1">
+   327→        {pages.map((page) => {
+   328→          const Icon = PAGE_ICONS[page]
+   329→          const isActive = activePage === page
+   330→          return (
+   331→            <TooltipProvider key={page} delayDuration={0}>
+   332→              <Tooltip>
+   333→                <TooltipTrigger asChild>
+   334→                  <button
+   335→                    onClick={() => onPageChange(page)}
+   336→                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+   337→                      isActive
+   338→                        ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+   339→                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+   340→                    }`}
+   341→                  >
+   342→                    <Icon className="h-4 w-4 shrink-0" />
+   343→                    {!collapsed && <span className="truncate">{PAGE_LABELS[page]}</span>}
+   344→                  </button>
+   345→                </TooltipTrigger>
+   346→                {collapsed && (
+   347→                  <TooltipContent side="right" className="font-sans">
+   348→                    {PAGE_LABELS[page]}
+   349→                  </TooltipContent>
+   350→                )}
+   351→              </Tooltip>
+   352→            </TooltipProvider>
+   353→          )
+   354→        })}
+   355→      </nav>
+   356→
+   357→      {/* Footer flag stripe */}
+   358→      {!collapsed && (
+   359→        <div className="px-4 py-3 border-t border-sidebar-border">
+   360→          <div className="flex gap-1 justify-center">
+   361→            <div className="h-1.5 w-8 rounded-full bg-guinea-red" />
+   362→            <div className="h-1.5 w-8 rounded-full bg-guinea-gold" />
+   363→            <div className="h-1.5 w-8 rounded-full bg-guinea-green" />
+   364→          </div>
+   365→          <p className="text-[10px] text-center mt-1.5 text-sidebar-foreground/50">
+   366→            République de Guinée
+   367→          </p>
+   368→        </div>
+   369→      )}
+   370→    </aside>
+   371→  )
+   372→}
+   373→
+   374→// ============================================================================
+   375→// DASHBOARD PAGE
+   376→// ============================================================================
+   377→
+   378→function DashboardPage({ stats, loading, onNavigate }: {
+   379→  stats: Stats | null
+   380→  loading: boolean
+   381→  onNavigate: (p: PageType) => void
+   382→}) {
+   383→  if (loading || !stats) {
+   384→    return (
+   385→      <div className="space-y-6">
+   386→        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   387→          {Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)}
+   388→        </div>
+   389→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   390→          <CardSkeleton />
+   391→          <CardSkeleton />
+   392→        </div>
+   393→      </div>
+   394→    )
+   395→  }
+   396→
+   397→  const topRegions = Object.entries(stats.byRegion).sort((a, b) => b[1] - a[1]).slice(0, 8)
+   398→  const maxRegionCount = topRegions.length > 0 ? topRegions[0][1] : 1
+   399→
+   400→  const withoutWebsite = (stats.byDigitalStatus['none'] ?? 0)
+   401→  const withWebsite = stats.hotelsWithWebsite
+   402→  const partialDigital = (stats.byDigitalStatus['partial'] ?? 0)
+   403→
+   404→  return (
+   405→    <div className="space-y-6">
+   406→      {/* Stats Cards */}
+   407→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   408→        <Card className="border-l-4 border-l-guinea-green">
+   409→          <CardHeader className="pb-2 pt-4 px-4">
+   410→            <CardDescription className="text-xs">Total Hôtels</CardDescription>
+   411→          </CardHeader>
+   412→          <CardContent className="px-4 pb-4">
+   413→            <div className="text-2xl font-bold text-guinea-green">{formatNumber(stats.totalHotels)}</div>
+   414→            <p className="text-xs text-muted-foreground mt-1">en Guinée</p>
+   415→          </CardContent>
+   416→        </Card>
+   417→        <Card className="border-l-4 border-l-emerald-500">
+   418→          <CardHeader className="pb-2 pt-4 px-4">
+   419→            <CardDescription className="text-xs">Site web vérifié</CardDescription>
+   420→          </CardHeader>
+   421→          <CardContent className="px-4 pb-4">
+   422→            <div className="text-2xl font-bold text-emerald-600">{formatNumber(withWebsite)}</div>
+   423→            <p className="text-xs text-muted-foreground mt-1">{stats.digitalReadiness}% prêt digital</p>
+   424→          </CardContent>
+   425→        </Card>
+   426→        <Card className="border-l-4 border-l-guinea-red">
+   427→          <CardHeader className="pb-2 pt-4 px-4">
+   428→            <CardDescription className="text-xs">Sans site web</CardDescription>
+   429→          </CardHeader>
+   430→          <CardContent className="px-4 pb-4">
+   431→            <div className="text-2xl font-bold text-guinea-red">{formatNumber(withoutWebsite)}</div>
+   432→            <button onClick={() => onNavigate('prospects')} className="text-xs text-guinea-gold hover:underline mt-1 cursor-pointer">
+   433→              Voir les prospects →
+   434→            </button>
+   435→          </CardContent>
+   436→        </Card>
+   437→        <Card className="border-l-4 border-l-guinea-gold">
+   438→          <CardHeader className="pb-2 pt-4 px-4">
+   439→            <CardDescription className="text-xs">Score moyen</CardDescription>
+   440→          </CardHeader>
+   441→          <CardContent className="px-4 pb-4">
+   442→            <div className="text-2xl font-bold text-guinea-gold">{stats.averageScore}</div>
+   443→            <p className="text-xs text-muted-foreground mt-1">sur 100</p>
+   444→          </CardContent>
+   445→        </Card>
+   446→      </div>
+   447→
+   448→      {/* Middle Row */}
+   449→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   450→        {/* Region Distribution */}
+   451→        <Card>
+   452→          <CardHeader className="pb-2">
+   453→            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   454→              <MapPin className="h-4 w-4 text-guinea-green" />
+   455→              Distribution par région
+   456→            </CardTitle>
+   457→          </CardHeader>
+   458→          <CardContent>
+   459→            <div className="space-y-2">
+   460→              {topRegions.map(([region, count]) => (
+   461→                <div key={region} className="flex items-center gap-3">
+   462→                  <span className="text-xs w-20 text-right text-muted-foreground truncate">{region}</span>
+   463→                  <div className="flex-1 h-5 bg-muted rounded-full overflow-hidden">
+   464→                    <div
+   465→                      className="h-full bg-gradient-to-r from-guinea-green to-guinea-green-light rounded-full transition-all duration-500"
+   466→                      style={{ width: `${(count / maxRegionCount) * 100}%` }}
+   467→                    />
+   468→                  </div>
+   469→                  <span className="text-xs font-medium w-8">{count}</span>
+   470→                </div>
+   471→              ))}
+   472→            </div>
+   473→          </CardContent>
+   474→        </Card>
+   475→
+   476→        {/* Pipeline Summary */}
+   477→        <Card>
+   478→          <CardHeader className="pb-2">
+   479→            <div className="flex items-center justify-between">
+   480→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   481→                <GitBranch className="h-4 w-4 text-guinea-green" />
+   482→                Pipeline CRM
+   483→              </CardTitle>
+   484→              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => onNavigate('pipeline')}>
+   485→                Voir tout <ArrowRight className="h-3 w-3 ml-1" />
+   486→              </Button>
+   487→            </div>
+   488→          </CardHeader>
+   489→          <CardContent>
+   490→            <div className="space-y-2">
+   491→              {Object.entries(STAGE_LABELS).map(([stage, label]) => {
+   492→                const count = stats.pipelineDistribution[stage] ?? 0
+   493→                const pct = stats.totalHotels > 0 ? (count / stats.totalHotels) * 100 : 0
+   494→                return (
+   495→                  <div key={stage} className="flex items-center gap-3">
+   496→                    <span className="text-xs w-20 text-muted-foreground">{label}</span>
+   497→                    <div className="flex-1 h-5 bg-muted rounded-full overflow-hidden">
+   498→                      <div
+   499→                        className={`h-full rounded-full transition-all duration-500 ${getScoreBg(count > 0 ? stage === 'client' ? 80 : stage === 'proposal' ? 60 : stage === 'interesse' ? 45 : stage === 'contacte' ? 30 : 15 : 0)}`}
+   500→                        style={{ width: `${Math.max(pct, count > 0 ? 3 : 0)}%` }}
+   501→                      />
+   502→                    </div>
+   503→                    <span className="text-xs font-medium w-8">{count}</span>
+   504→                  </div>
+   505→                )
+   506→              })}
+   507→            </div>
+   508→            <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+   509→              <Users className="h-3 w-3" />
+   510→              {stats.recentContactsCount} contacts cette semaine
+   511→            </div>
+   512→          </CardContent>
+   513→        </Card>
+   514→      </div>
+   515→
+   516→      {/* Bottom Row */}
+   517→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   518→        {/* Digital Status */}
+   519→        <Card>
+   520→          <CardHeader className="pb-2">
+   521→            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   522→              <Wifi className="h-4 w-4 text-guinea-green" />
+   523→              Statut digital
+   524→            </CardTitle>
+   525→          </CardHeader>
+   526→          <CardContent>
+   527→            <div className="space-y-3">
+   528→              {(['ok', 'partial', 'none'] as const).map((status) => {
+   529→                const count = stats.byDigitalStatus[status] ?? 0
+   530→                const pct = stats.totalHotels > 0 ? Math.round((count / stats.totalHotels) * 100) : 0
+   531→                return (
+   532→                  <div key={status} className="flex items-center justify-between">
+   533→                    <div className="flex items-center gap-2">
+   534→                      <Badge variant="outline" className={DIGITAL_STATUS_COLORS[status]}>
+   535→                        {DIGITAL_STATUS_LABELS[status]}
+   536→                      </Badge>
+   537→                    </div>
+   538→                    <div className="text-right">
+   539→                      <span className="text-sm font-semibold">{count}</span>
+   540→                      <span className="text-xs text-muted-foreground ml-1">({pct}%)</span>
+   541→                    </div>
+   542→                  </div>
+   543→                )
+   544→              })}
+   545→              <Progress value={stats.digitalReadiness} className="h-2 mt-2" />
+   546→              <p className="text-xs text-muted-foreground">Prêt digital: {stats.digitalReadiness}%</p>
+   547→            </div>
+   548→          </CardContent>
+   549→        </Card>
+   550→
+   551→        {/* Platform Presence */}
+   552→        <Card>
+   553→          <CardHeader className="pb-2">
+   554→            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   555→              <Globe className="h-4 w-4 text-guinea-green" />
+   556→              Plateformes
+   557→            </CardTitle>
+   558→          </CardHeader>
+   559→          <CardContent>
+   560→            <div className="space-y-3">
+   561→              <div className="flex items-center justify-between">
+   562→                <div className="flex items-center gap-2">
+   563→                  <div className="w-6 h-6 rounded bg-blue-600 text-white flex items-center justify-center text-[9px] font-bold">B</div>
+   564→                  <span className="text-sm">Booking.com</span>
+   565→                </div>
+   566→                <span className="text-sm font-semibold">{stats.totalHotels > 0 ? '—' : '0'}</span>
+   567→              </div>
+   568→              <div className="flex items-center justify-between">
+   569→                <div className="flex items-center gap-2">
+   570→                  <div className="w-6 h-6 rounded bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold">TA</div>
+   571→                  <span className="text-sm">TripAdvisor</span>
+   572→                </div>
+   573→                <span className="text-sm font-semibold">{stats.totalHotels > 0 ? '—' : '0'}</span>
+   574→              </div>
+   575→              <Separator className="my-1" />
+   576→              <div className="flex items-center justify-between text-sm">
+   577→                <span className="text-muted-foreground">Avec téléphone</span>
+   578→                <span className="font-semibold">{formatNumber(stats.hotelsWithPhone)}</span>
+   579→              </div>
+   580→              <div className="flex items-center justify-between text-sm">
+   581→                <span className="text-muted-foreground">Avec email</span>
+   582→                <span className="font-semibold">{formatNumber(stats.hotelsWithEmail)}</span>
+   583→              </div>
+   584→            </div>
+   585→          </CardContent>
+   586→        </Card>
+   587→
+   588→        {/* Priority Distribution */}
+   589→        <Card>
+   590→          <CardHeader className="pb-2">
+   591→            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   592→              <TrendingUp className="h-4 w-4 text-guinea-green" />
+   593→              Priorités
+   594→            </CardTitle>
+   595→          </CardHeader>
+   596→          <CardContent>
+   597→            <div className="space-y-3">
+   598→              {(['hot', 'warm', 'cold'] as const).map((priority) => {
+   599→                const count = stats.priorityDistribution[priority] ?? 0
+   600→                const pct = stats.totalHotels > 0 ? Math.round((count / stats.totalHotels) * 100) : 0
+   601→                return (
+   602→                  <div key={priority} className="flex items-center justify-between">
+   603→                    <Badge variant="outline" className={PRIORITY_COLORS[priority]}>
+   604→                      {priority === 'hot' ? '🔥 HOT' : priority === 'warm' ? '🌤 Tiède' : '❄️ Froid'}
+   605→                    </Badge>
+   606→                    <div className="text-right">
+   607→                      <span className="text-sm font-semibold">{count}</span>
+   608→                      <span className="text-xs text-muted-foreground ml-1">({pct}%)</span>
+   609→                    </div>
+   610→                  </div>
+   611→                )
+   612→              })}
+   613→            </div>
+   614→            <Button variant="outline" size="sm" className="w-full mt-4 text-xs h-8" onClick={() => onNavigate('prospects')}>
+   615→              <Flame className="h-3 w-3 mr-1" /> Voir les prospects HOT
+   616→            </Button>
+   617→          </CardContent>
+   618→        </Card>
+   619→      </div>
+   620→    </div>
+   621→  )
+   622→}
+   623→
+   624→// ============================================================================
+   625→// HOTELS PAGE (Base Hôtels)
+   626→// ============================================================================
+   627→
+   628→function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) {
+   629→  const [hotels, setHotels] = useState<Hotel[]>([])
+   630→  const [loading, setLoading] = useState(true)
+   631→  const [search, setSearch] = useState('')
+   632→  const [regionFilter, setRegionFilter] = useState('all')
+   633→  const [statusFilter, setStatusFilter] = useState('all')
+   634→  const [priorityFilter, setPriorityFilter] = useState('all')
+   635→  const [sortBy, setSortBy] = useState('createdAt')
+   636→  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+   637→  const [page, setPage] = useState(1)
+   638→  const [totalPages, setTotalPages] = useState(1)
+   639→  const [total, setTotal] = useState(0)
+   640→  const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null)
+   641→  const [hotelDetail, setHotelDetail] = useState<Hotel | null>(null)
+   642→  const [detailLoading, setDetailLoading] = useState(false)
+   643→  const limit = 15
+   644→
+   645→  const fetchHotels = useCallback(async () => {
+   646→    setLoading(true)
+   647→    try {
+   648→      const params = new URLSearchParams()
+   649→      params.set('page', page.toString())
+   650→      params.set('limit', limit.toString())
+   651→      params.set('sortBy', sortBy)
+   652→      params.set('sortOrder', sortOrder)
+   653→      if (search) params.set('search', search)
+   654→      if (regionFilter !== 'all') params.set('region', regionFilter)
+   655→      if (statusFilter !== 'all') params.set('statusDigital', statusFilter)
+   656→      if (priorityFilter !== 'all') params.set('priority', priorityFilter)
+   657→
+   658→      const res = await fetch(`/api/hotels?${params}`)
+   659→      if (res.ok) {
+   660→        const data = await res.json()
+   661→        setHotels(data.hotels)
+   662→        setTotalPages(data.pagination.totalPages)
+   663→        setTotal(data.pagination.total)
+   664→      }
+   665→    } catch {
+   666→      toast({ title: 'Erreur', description: 'Impossible de charger les hôtels', variant: 'destructive' })
+   667→    } finally {
+   668→      setLoading(false)
+   669→    }
+   670→  }, [page, sortBy, sortOrder, search, regionFilter, statusFilter, priorityFilter, toast])
+   671→
+   672→  useEffect(() => { fetchHotels() }, [fetchHotels])
+   673→
+   674→  const fetchHotelDetail = useCallback(async (id: string) => {
+   675→    setDetailLoading(true)
+   676→    try {
+   677→      const res = await fetch(`/api/hotels/${id}`)
+   678→      if (res.ok) {
+   679→        const data = await res.json()
+   680→        setHotelDetail(data.hotel)
+   681→      }
+   682→    } catch {
+   683→      toast({ title: 'Erreur', description: 'Impossible de charger les détails', variant: 'destructive' })
+   684→    } finally {
+   685→      setDetailLoading(false)
+   686→    }
+   687→  }, [toast])
+   688→
+   689→  const handleSort = (col: string) => {
+   690→    if (sortBy === col) {
+   691→      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+   692→    } else {
+   693→      setSortBy(col)
+   694→      setSortOrder('desc')
+   695→    }
+   696→  }
+   697→
+   698→  const handleExport = async () => {
+   699→    try {
+   700→      const params = new URLSearchParams()
+   701→      if (search) params.set('search', search)
+   702→      if (regionFilter !== 'all') params.set('region', regionFilter)
+   703→      if (statusFilter !== 'all') params.set('statusDigital', statusFilter)
+   704→      if (priorityFilter !== 'all') params.set('priority', priorityFilter)
+   705→      const res = await fetch(`/api/export?${params}`)
+   706→      if (res.ok) {
+   707→        const blob = await res.blob()
+   708→        const url = URL.createObjectURL(blob)
+   709→        const a = document.createElement('a')
+   710→        a.href = url
+   711→        a.download = `hotels-guinea-${new Date().toISOString().slice(0, 10)}.csv`
+   712→        a.click()
+   713→        URL.revokeObjectURL(url)
+   714→        toast({ title: 'Export réussi', description: 'Le fichier CSV a été téléchargé' })
+   715→      }
+   716→    } catch {
+   717→      toast({ title: 'Erreur', description: "L'export a échoué", variant: 'destructive' })
+   718→    }
+   719→  }
+   720→
+   721→  const handleDeleteHotel = async (id: string) => {
+   722→    try {
+   723→      const res = await fetch(`/api/hotels/${id}`, { method: 'DELETE' })
+   724→      if (res.ok) {
+   725→        toast({ title: 'Supprimé', description: 'Hôtel supprimé avec succès' })
+   726→        fetchHotels()
+   727→        setSelectedHotel(null)
+   728→      }
+   729→    } catch {
+   730→      toast({ title: 'Erreur', description: 'Impossible de supprimer', variant: 'destructive' })
+   731→    }
+   732→  }
+   733→
+   734→  return (
+   735→    <div className="space-y-4">
+   736→      {/* Search & Filters */}
+   737→      <Card>
+   738→        <CardContent className="pt-4 pb-4">
+   739→          <div className="flex flex-col sm:flex-row gap-3">
+   740→            <div className="flex-1 relative">
+   741→              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   742→              <Input
+   743→                placeholder="Rechercher un hôtel, ville, région..."
+   744→                className="pl-9"
+   745→                value={search}
+   746→                onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+   747→              />
+   748→            </div>
+   749→            <Select value={regionFilter} onValueChange={(v) => { setRegionFilter(v); setPage(1) }}>
+   750→              <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Région" /></SelectTrigger>
+   751→              <SelectContent>
+   752→                <SelectItem value="all">Toutes régions</SelectItem>
+   753→                <SelectItem value="Conakry">Conakry</SelectItem>
+   754→                <SelectItem value="Kankan">Kankan</SelectItem>
+   755→                <SelectItem value="Kindia">Kindia</SelectItem>
+   756→                <SelectItem value="Nzérékoré">Nzérékoré</SelectItem>
+   757→                <SelectItem value="Boké">Boké</SelectItem>
+   758→                <SelectItem value="Labé">Labé</SelectItem>
+   759→                <SelectItem value="Mamou">Mamou</SelectItem>
+   760→                <SelectItem value="Faranah">Faranah</SelectItem>
+   761→              </SelectContent>
+   762→            </Select>
+   763→            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1) }}>
+   764→              <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Statut" /></SelectTrigger>
+   765→              <SelectContent>
+   766→                <SelectItem value="all">Tous statuts</SelectItem>
+   767→                <SelectItem value="ok">Complet</SelectItem>
+   768→                <SelectItem value="partial">Partiel</SelectItem>
+   769→                <SelectItem value="none">Aucun</SelectItem>
+   770→              </SelectContent>
+   771→            </Select>
+   772→            <Select value={priorityFilter} onValueChange={(v) => { setPriorityFilter(v); setPage(1) }}>
+   773→              <SelectTrigger className="w-full sm:w-32"><SelectValue placeholder="Priorité" /></SelectTrigger>
+   774→              <SelectContent>
+   775→                <SelectItem value="all">Toutes</SelectItem>
+   776→                <SelectItem value="hot">🔥 HOT</SelectItem>
+   777→                <SelectItem value="warm">🌤 Tiède</SelectItem>
+   778→                <SelectItem value="cold">❄️ Froid</SelectItem>
+   779→              </SelectContent>
+   780→            </Select>
+   781→            <Button variant="outline" size="icon" onClick={handleExport} title="Exporter CSV">
+   782→              <Download className="h-4 w-4" />
+   783→            </Button>
+   784→          </div>
+   785→          <div className="flex items-center justify-between mt-3">
+   786→            <span className="text-xs text-muted-foreground">{formatNumber(total)} hôtels trouvés</span>
+   787→            <div className="flex items-center gap-1">
+   788→              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+   789→                <ChevronLeft className="h-4 w-4" />
+   790→              </Button>
+   791→              <span className="text-xs px-2">{page}/{totalPages}</span>
+   792→              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+   793→                <ChevronRight className="h-4 w-4" />
+   794→              </Button>
+   795→            </div>
+   796→          </div>
+   797→        </CardContent>
+   798→      </Card>
+   799→
+   800→      {/* Hotels Table */}
+   801→      <Card>
+   802→        <CardContent className="p-0">
+   803→          {loading ? (
+   804→            <div className="p-6"><TableSkeleton rows={8} /></div>
+   805→          ) : hotels.length === 0 ? (
+   806→            <div className="p-12 text-center text-muted-foreground">
+   807→              <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+   808→              <p>Aucun hôtel trouvé</p>
+   809→              <p className="text-xs mt-1">Modifiez vos critères de recherche</p>
+   810→            </div>
+   811→          ) : (
+   812→            <div className="overflow-x-auto">
+   813→              <Table>
+   814→                <TableHeader>
+   815→                  <TableRow>
+   816→                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('name')}>
+   817→                      <span className="flex items-center gap-1">Nom {sortBy === 'name' && (sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />)}</span>
+   818→                    </TableHead>
+   819→                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('region')}>
+   820→                      <span className="flex items-center gap-1">Région {sortBy === 'region' && (sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />)}</span>
+   821→                    </TableHead>
+   822→                    <TableHead>Étoiles</TableHead>
+   823→                    <TableHead>Site web</TableHead>
+   824→                    <TableHead>Plateformes</TableHead>
+   825→                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('score')}>
+   826→                      <span className="flex items-center gap-1">Score {sortBy === 'score' && (sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />)}</span>
+   827→                    </TableHead>
+   828→                    <TableHead>Priorité</TableHead>
+   829→                    <TableHead>Actions</TableHead>
+   830→                  </TableRow>
+   831→                </TableHeader>
+   832→                <TableBody>
+   833→                  {hotels.map((hotel) => (
+   834→                    <TableRow key={hotel.id} className="cursor-pointer hover:bg-muted/30" onClick={() => { setSelectedHotel(hotel); fetchHotelDetail(hotel.id) }}>
+   835→                      <TableCell>
+   836→                        <div>
+   837→                          <div className="font-medium text-sm">{hotel.name}</div>
+   838→                          <div className="text-xs text-muted-foreground">{hotel.city}</div>
+   839→                        </div>
+   840→                      </TableCell>
+   841→                      <TableCell><Badge variant="outline" className="text-xs">{hotel.region}</Badge></TableCell>
+   842→                      <TableCell>
+   843→                        {hotel.stars > 0 ? (
+   844→                          <div className="flex">
+   845→                            {Array.from({ length: Math.min(hotel.stars, 5) }).map((_, i) => (
+   846→                              <Star key={i} className="h-3 w-3 fill-guinea-gold text-guinea-gold" />
+   847→                            ))}
+   848→                          </div>
+   849→                        ) : <span className="text-xs text-muted-foreground">—</span>}
+   850→                      </TableCell>
+   851→                      <TableCell>
+   852→                        <Badge variant="outline" className={`text-[10px] ${DIGITAL_STATUS_COLORS[hotel.statusDigital]}`}>
+   853→                          {DIGITAL_STATUS_LABELS[hotel.statusDigital]}
+   854→                        </Badge>
+   855→                      </TableCell>
+   856→                      <TableCell>
+   857→                        <div className="flex gap-1">
+   858→                          {hotel.hasBooking && <Badge className="text-[9px] h-5 bg-blue-600">Booking</Badge>}
+   859→                          {hotel.hasTripadvisor && <Badge className="text-[9px] h-5 bg-emerald-600">TA</Badge>}
+   860→                        </div>
+   861→                      </TableCell>
+   862→                      <TableCell>
+   863→                        <span className={`text-sm font-semibold ${getScoreColor(hotel.score)}`}>{hotel.score}</span>
+   864→                      </TableCell>
+   865→                      <TableCell>
+   866→                        <Badge variant="outline" className={`text-[10px] ${PRIORITY_COLORS[hotel.priority]}`}>
+   867→                          {hotel.priority === 'hot' ? '🔥' : hotel.priority === 'warm' ? '🌤' : '❄️'} {hotel.priority.toUpperCase()}
+   868→                        </Badge>
+   869→                      </TableCell>
+   870→                      <TableCell>
+   871→                        <div className="flex gap-1">
+   872→                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setSelectedHotel(hotel); fetchHotelDetail(hotel.id) }}>
+   873→                            <Eye className="h-3.5 w-3.5" />
+   874→                          </Button>
+   875→                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteHotel(hotel.id) }}>
+   876→                            <Trash2 className="h-3.5 w-3.5" />
+   877→                          </Button>
+   878→                        </div>
+   879→                      </TableCell>
+   880→                    </TableRow>
+   881→                  ))}
+   882→                </TableBody>
+   883→              </Table>
+   884→            </div>
+   885→          )}
+   886→        </CardContent>
+   887→      </Card>
+   888→
+   889→      {/* Hotel Detail Dialog */}
+   890→      <Dialog open={!!selectedHotel} onOpenChange={(open) => { if (!open) { setSelectedHotel(null); setHotelDetail(null) } }}>
+   891→        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+   892→          <DialogHeader>
+   893→            <DialogTitle className="flex items-center gap-2">
+   894→              <Building2 className="h-5 w-5 text-guinea-green" />
+   895→              {selectedHotel?.name}
+   896→            </DialogTitle>
+   897→            <DialogDescription>
+   898→              {selectedHotel?.city}, {selectedHotel?.region}
+   899→            </DialogDescription>
+   900→          </DialogHeader>
+   901→          {detailLoading ? (
+   902→            <div className="space-y-3 py-4">
+   903→              <Skeleton className="h-4 w-full" />
+   904→              <Skeleton className="h-4 w-3/4" />
+   905→              <Skeleton className="h-4 w-1/2" />
+   906→            </div>
+   907→          ) : hotelDetail ? (
+   908→            <div className="space-y-4">
+   909→              {/* Key info grid */}
+   910→              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+   911→                <div className="flex items-center gap-2 text-sm">
+   912→                  <Star className="h-4 w-4 text-guinea-gold" />
+   913→                  <span>{hotelDetail.stars > 0 ? `${hotelDetail.stars} étoiles` : 'Non classé'}</span>
+   914→                </div>
+   915→                <div className="flex items-center gap-2 text-sm">
+   916→                  <Globe className="h-4 w-4 text-guinea-green" />
+   917→                  <Badge variant="outline" className={DIGITAL_STATUS_COLORS[hotelDetail.statusDigital]}>
+   918→                    {DIGITAL_STATUS_LABELS[hotelDetail.statusDigital]}
+   919→                  </Badge>
+   920→                </div>
+   921→                <div className="flex items-center gap-2 text-sm">
+   922→                  <span className={`font-bold ${getScoreColor(hotelDetail.score)}`}>Score: {hotelDetail.score}/100</span>
+   923→                </div>
+   924→              </div>
+   925→
+   926→              <Separator />
+   927→
+   928→              {/* Contact Info */}
+   929→              <div className="space-y-2">
+   930→                <h4 className="text-sm font-semibold flex items-center gap-1"><Phone className="h-4 w-4" /> Contact</h4>
+   931→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+   932→                  {hotelDetail.phone && (
+   933→                    <div className="flex items-center gap-2">
+   934→                      <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+   935→                      <a href={`tel:${hotelDetail.phone}`} className="text-guinea-green hover:underline">{hotelDetail.phone}</a>
+   936→                    </div>
+   937→                  )}
+   938→                  {hotelDetail.email && (
+   939→                    <div className="flex items-center gap-2">
+   940→                      <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+   941→                      <a href={`mailto:${hotelDetail.email}`} className="text-guinea-green hover:underline">{hotelDetail.email}</a>
+   942→                    </div>
+   943→                  )}
+   944→                  {hotelDetail.web && (
+   945→                    <div className="flex items-center gap-2">
+   946→                      <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+   947→                      <a href={hotelDetail.web} target="_blank" rel="noopener noreferrer" className="text-guinea-green hover:underline flex items-center gap-1">
+   948→                        {hotelDetail.web.length > 35 ? hotelDetail.web.slice(0, 35) + '...' : hotelDetail.web}
+   949→                        <ExternalLink className="h-3 w-3" />
+   950→                      </a>
+   951→                      <Badge variant="outline" className={`text-[9px] ${hotelDetail.webVerified ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+   952→                        {hotelDetail.webVerified ? '✓ Vérifié' : '✗ Non vérifié'}
+   953→                      </Badge>
+   954→                    </div>
+   955→                  )}
+   956→                  {hotelDetail.wa && (
+   957→                    <div className="flex items-center gap-2">
+   958→                      <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+   959→                      <a href={`https://wa.me/${hotelDetail.wa.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-guinea-green hover:underline">WhatsApp</a>
+   960→                    </div>
+   961→                  )}
+   962→                </div>
+   963→                {!hotelDetail.phone && !hotelDetail.email && !hotelDetail.web && (
+   964→                  <p className="text-sm text-muted-foreground italic">Aucune information de contact disponible</p>
+   965→                )}
+   966→              </div>
+   967→
+   968→              <Separator />
+   969→
+   970→              {/* Platforms */}
+   971→              <div className="space-y-2">
+   972→                <h4 className="text-sm font-semibold flex items-center gap-1"><Globe className="h-4 w-4" /> Plateformes</h4>
+   973→                <div className="flex flex-wrap gap-2">
+   974→                  {hotelDetail.hasBooking && <Badge className="bg-blue-600">Booking.com{hotelDetail.ratingBooking > 0 ? ` (${hotelDetail.ratingBooking}/10, ${hotelDetail.reviewsBooking} avis)` : ''}</Badge>}
+   975→                  {hotelDetail.hasTripadvisor && <Badge className="bg-emerald-600">TripAdvisor{hotelDetail.ratingTripadvisor > 0 ? ` (${hotelDetail.ratingTripadvisor}/5, ${hotelDetail.reviewsTripadvisor} avis)` : ''}</Badge>}
+   976→                  {hotelDetail.hasAgoda && <Badge className="bg-red-600">Agoda</Badge>}
+   977→                  {hotelDetail.hasExpedia && <Badge className="bg-orange-600">Expedia</Badge>}
+   978→                  {!hotelDetail.hasBooking && !hotelDetail.hasTripadvisor && !hotelDetail.hasAgoda && !hotelDetail.hasExpedia && (
+   979→                    <p className="text-sm text-muted-foreground italic">Aucune plateforme détectée</p>
+   980→                  )}
+   981→                </div>
+   982→              </div>
+   983→
+   984→              {/* Pipeline Stage */}
+   985→              <div className="flex items-center gap-2">
+   986→                <span className="text-sm text-muted-foreground">Pipeline:</span>
+   987→                <Badge variant="outline" className={STAGE_COLORS[hotelDetail.pipelineStage]}>
+   988→                  {STAGE_LABELS[hotelDetail.pipelineStage] || hotelDetail.pipelineStage}
+   989→                </Badge>
+   990→                <Badge variant="outline" className={PRIORITY_COLORS[hotelDetail.priority]}>
+   991→                  {hotelDetail.priority.toUpperCase()}
+   992→                </Badge>
+   993→              </div>
+   994→
+   995→              {/* Additional Info */}
+   996→              {(hotelDetail.priceUsd || hotelDetail.rooms > 0 || hotelDetail.address) && (
+   997→                <div className="text-sm space-y-1">
+   998→                  {hotelDetail.address && <p>📍 {hotelDetail.address}{hotelDetail.quartier ? `, ${hotelDetail.quartier}` : ''}</p>}
+   999→                  {hotelDetail.priceUsd && <p>💰 À partir de {hotelDetail.priceUsd}</p>}
+  1000→                  {hotelDetail.rooms > 0 && <p>🛏️ {hotelDetail.rooms} chambres</p>}
+  1001→                </div>
+  1002→              )}
+  1003→
+  1004→              {/* Verification Logs */}
+  1005→              {hotelDetail.verificationLogs && hotelDetail.verificationLogs.length > 0 && (
+  1006→                <>
+  1007→                  <Separator />
+  1008→                  <div className="space-y-2">
+  1009→                    <h4 className="text-sm font-semibold flex items-center gap-1"><RefreshCw className="h-4 w-4" /> Vérifications URL</h4>
+  1010→                    <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
+  1011→                      {hotelDetail.verificationLogs.slice(0, 5).map((log) => (
+  1012→                        <div key={log.id} className="flex items-center gap-2 text-xs">
+  1013→                          {log.status === 'ok' ? <CheckCircle2 className="h-3 w-3 text-emerald-500" /> :
+  1014→                           log.status === 'timeout' ? <Clock className="h-3 w-3 text-amber-500" /> :
+  1015→                           <XCircle className="h-3 w-3 text-red-500" />}
+  1016→                          <span className="text-muted-foreground">{formatDateTime(log.checkedAt)}</span>
+  1017→                          <Badge variant="outline" className="text-[9px]">{log.status}</Badge>
+  1018→                          {log.responseMs && <span className="text-muted-foreground">{log.responseMs}ms</span>}
+  1019→                        </div>
+  1020→                      ))}
+  1021→                    </div>
+  1022→                  </div>
+  1023→                </>
+  1024→              )}
+  1025→
+  1026→              {/* Notes */}
+  1027→              {hotelDetail.notes && (
+  1028→                <div className="bg-muted/50 rounded-lg p-3 text-sm">
+  1029→                  <span className="text-muted-foreground font-medium">Notes:</span> {hotelDetail.notes}
+  1030→                </div>
+  1031→              )}
+  1032→            </div>
+  1033→          ) : null}
+  1034→          <DialogFooter>
+  1035→            <Button variant="outline" onClick={() => { setSelectedHotel(null); setHotelDetail(null) }}>Fermer</Button>
+  1036→          </DialogFooter>
+  1037→        </DialogContent>
+  1038→      </Dialog>
+  1039→    </div>
+  1040→  )
+  1041→}
+  1042→
+  1043→// ============================================================================
+  1044→// AGENT DE COLLECTE PAGE
+  1045→// ============================================================================
+  1046→
+  1047→function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) {
+  1048→  const [collecting, setCollecting] = useState(false)
+  1049→  const [verifying, setVerifying] = useState(false)
+  1050→  const [enriching, setEnriching] = useState(false)
+  1051→  const [searchQuery, setSearchQuery] = useState('')
+  1052→  const [searching, setSearching] = useState(false)
+  1053→  const [results, setResults] = useState<{ found: number; added: number; updated: number; errors: number; details: string[] } | null>(null)
+  1054→  const [verifyResults, setVerifyResults] = useState<{ verified: number; summary: Record<string, number> } | null>(null)
+  1055→  const [enrichResults, setEnrichResults] = useState<{ totalProcessed: number; enriched: number; notEnriched: number } | null>(null)
+  1056→  const [searchResults, setSearchResults] = useState<{ totalResults: number; hotelsAdded: number; hotelsSkipped: number } | null>(null)
+  1057→
+  1058→  const handleCollect = async () => {
+  1059→    setCollecting(true)
+  1060→    setResults(null)
+  1061→    try {
+  1062→      const res = await fetch('/api/cron/collect', { method: 'POST' })
+  1063→      if (res.ok) {
+  1064→        const data = await res.json()
+  1065→        setResults(data)
+  1066→        toast({ title: 'Collecte terminée', description: `${data.added} ajoutés, ${data.updated} mis à jour` })
+  1067→      } else {
+  1068→        toast({ title: 'Erreur de collecte', description: 'La collecte automatique a échoué', variant: 'destructive' })
+  1069→      }
+  1070→    } catch {
+  1071→      toast({ title: 'Erreur', description: 'Impossible de lancer la collecte', variant: 'destructive' })
+  1072→    } finally {
+  1073→      setCollecting(false)
+  1074→    }
+  1075→  }
+  1076→
+  1077→  const handleVerify = async () => {
+  1078→    setVerifying(true)
+  1079→    setVerifyResults(null)
+  1080→    try {
+  1081→      const res = await fetch('/api/hotels/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verifyAll: true }) })
+  1082→      if (res.ok) {
+  1083→        const data = await res.json()
+  1084→        setVerifyResults(data)
+  1085→        toast({ title: 'Vérification terminée', description: `${data.verified} URLs vérifiées` })
+  1086→      }
+  1087→    } catch {
+  1088→      toast({ title: 'Erreur', description: 'Impossible de vérifier les URLs', variant: 'destructive' })
+  1089→    } finally {
+  1090→      setVerifying(false)
+  1091→    }
+  1092→  }
+  1093→
+  1094→  const handleEnrich = async () => {
+  1095→    setEnriching(true)
+  1096→    setEnrichResults(null)
+  1097→    try {
+  1098→      const res = await fetch('/api/hotels/enrich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enrichAllMissing: true }) })
+  1099→      if (res.ok) {
+  1100→        const data = await res.json()
+  1101→        setEnrichResults(data)
+  1102→        toast({ title: 'Enrichissement terminé', description: `${data.enriched} hôtels enrichis sur ${data.totalProcessed}` })
+  1103→      }
+  1104→    } catch {
+  1105→      toast({ title: 'Erreur', description: "Impossible d'enrichir les données", variant: 'destructive' })
+  1106→    } finally {
+  1107→      setEnriching(false)
+  1108→    }
+  1109→  }
+  1110→
+  1111→  const handleSearch = async () => {
+  1112→    if (!searchQuery.trim()) return
+  1113→    setSearching(true)
+  1114→    setSearchResults(null)
+  1115→    try {
+  1116→      const res = await fetch('/api/hotels/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: searchQuery }) })
+  1117→      if (res.ok) {
+  1118→        const data = await res.json()
+  1119→        setSearchResults(data)
+  1120→        toast({ title: 'Recherche terminée', description: `${data.hotelsAdded} nouveaux hôtels trouvés` })
+  1121→      }
+  1122→    } catch {
+  1123→      toast({ title: 'Erreur', description: 'La recherche a échoué', variant: 'destructive' })
+  1124→    } finally {
+  1125→      setSearching(false)
+  1126→    }
+  1127→  }
+  1128→
+  1129→  return (
+  1130→    <div className="space-y-6">
+  1131→      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+  1132→        {/* Auto Collect */}
+  1133→        <Card className="border-guinea-green/20">
+  1134→          <CardHeader>
+  1135→            <CardTitle className="text-sm flex items-center gap-2">
+  1136→              <Zap className="h-4 w-4 text-guinea-green" />
+  1137→              Collecte automatique
+  1138→            </CardTitle>
+  1139→            <CardDescription className="text-xs">
+  1140→              Lance 8 requêtes de recherche prédéfinies pour couvrir toutes les régions de Guinée
+  1141→            </CardDescription>
+  1142→          </CardHeader>
+  1143→          <CardContent>
+  1144→            <Button className="w-full bg-guinea-green hover:bg-guinea-green-light" onClick={handleCollect} disabled={collecting}>
+  1145→              {collecting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
+  1146→              {collecting ? 'Collecte en cours...' : 'Lancer la collecte'}
+  1147→            </Button>
+  1148→            {results && (
+  1149→              <div className="mt-3 p-3 bg-muted/50 rounded-lg text-xs space-y-1">
+  1150→                <div className="flex justify-between"><span className="text-muted-foreground">Résultats trouvés</span><span className="font-semibold">{results.found}</span></div>
+  1151→                <div className="flex justify-between"><span className="text-emerald-600">Ajoutés</span><span className="font-semibold text-emerald-600">{results.added}</span></div>
+  1152→                <div className="flex justify-between"><span className="text-blue-600">Mis à jour</span><span className="font-semibold text-blue-600">{results.updated}</span></div>
+  1153→                <div className="flex justify-between"><span className="text-red-600">Erreurs</span><span className="font-semibold text-red-600">{results.errors}</span></div>
+  1154→              </div>
+  1155→            )}
+  1156→          </CardContent>
+  1157→        </Card>
+  1158→
+  1159→        {/* Verify URLs */}
+  1160→        <Card className="border-guinea-gold/20">
+  1161→          <CardHeader>
+  1162→            <CardTitle className="text-sm flex items-center gap-2">
+  1163→              <Link2 className="h-4 w-4 text-guinea-gold" />
+  1164→              Vérification URLs
+  1165→            </CardTitle>
+  1166→            <CardDescription className="text-xs">
+  1167→              Vérifie la validité de tous les sites web d&apos;hôtels enregistrés
+  1168→            </CardDescription>
+  1169→          </CardHeader>
+  1170→          <CardContent>
+  1171→            <Button className="w-full bg-guinea-gold hover:bg-guinea-gold-light text-white" onClick={handleVerify} disabled={verifying}>
+  1172→              {verifying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+  1173→              {verifying ? 'Vérification...' : 'Vérifier les URLs'}
+  1174→            </Button>
+  1175→            {verifyResults && (
+  1176→              <div className="mt-3 p-3 bg-muted/50 rounded-lg text-xs space-y-1">
+  1177→                <div className="flex justify-between"><span className="text-muted-foreground">URLs vérifiées</span><span className="font-semibold">{verifyResults.verified}</span></div>
+  1178→                <div className="flex justify-between"><span className="text-emerald-600">✓ OK</span><span className="font-semibold">{verifyResults.summary.ok ?? 0}</span></div>
+  1179→                <div className="flex justify-between"><span className="text-red-600">✗ Hors ligne</span><span className="font-semibold">{verifyResults.summary.down ?? 0}</span></div>
+  1180→                <div className="flex justify-between"><span className="text-amber-600">⏱ Timeout</span><span className="font-semibold">{verifyResults.summary.timeout ?? 0}</span></div>
+  1181→              </div>
+  1182→            )}
+  1183→          </CardContent>
+  1184→        </Card>
+  1185→
+  1186→        {/* Enrich Data */}
+  1187→        <Card className="border-guinea-red/20">
+  1188→          <CardHeader>
+  1189→            <CardTitle className="text-sm flex items-center gap-2">
+  1190→              <Sparkles className="h-4 w-4 text-guinea-red" />
+  1191→              Enrichissement données
+  1192→            </CardTitle>
+  1193→            <CardDescription className="text-xs">
+  1194→              Recherche les informations manquantes (téléphone, email, site web) pour tous les hôtels
+  1195→            </CardDescription>
+  1196→          </CardHeader>
+  1197→          <CardContent>
+  1198→            <Button className="w-full bg-guinea-red hover:bg-red-700 text-white" onClick={handleEnrich} disabled={enriching}>
+  1199→              {enriching ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+  1200→              {enriching ? 'Enrichissement...' : 'Enrichir les données'}
+  1201→            </Button>
+  1202→            {enrichResults && (
+  1203→              <div className="mt-3 p-3 bg-muted/50 rounded-lg text-xs space-y-1">
+  1204→                <div className="flex justify-between"><span className="text-muted-foreground">Hôtels traités</span><span className="font-semibold">{enrichResults.totalProcessed}</span></div>
+  1205→                <div className="flex justify-between"><span className="text-emerald-600">Enrichis</span><span className="font-semibold text-emerald-600">{enrichResults.enriched}</span></div>
+  1206→                <div className="flex justify-between"><span className="text-muted-foreground">Non enrichis</span><span className="font-semibold">{enrichResults.notEnriched}</span></div>
+  1207→              </div>
+  1208→            )}
+  1209→          </CardContent>
+  1210→        </Card>
+  1211→      </div>
+  1212→
+  1213→      {/* Manual Search */}
+  1214→      <Card>
+  1215→        <CardHeader>
+  1216→          <CardTitle className="text-sm flex items-center gap-2">
+  1217→            <Search className="h-4 w-4 text-guinea-green" />
+  1218→            Recherche manuelle
+  1219→          </CardTitle>
+  1220→          <CardDescription className="text-xs">
+  1221→            Recherchez de nouveaux hôtels sur le web avec une requête personnalisée
+  1222→          </CardDescription>
+  1223→        </CardHeader>
+  1224→        <CardContent>
+  1225→          <div className="flex gap-3">
+  1226→            <Input
+  1227→              placeholder="Ex: hôtels Conakry site web, hotels Kindia booking..."
+  1228→              value={searchQuery}
+  1229→              onChange={(e) => setSearchQuery(e.target.value)}
+  1230→              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+  1231→              className="flex-1"
+  1232→            />
+  1233→            <Button onClick={handleSearch} disabled={searching || !searchQuery.trim()}>
+  1234→              {searching ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+  1235→              Rechercher
+  1236→            </Button>
+  1237→          </div>
+  1238→          {searchResults && (
+  1239→            <div className="mt-3 p-3 bg-muted/50 rounded-lg text-xs space-y-1">
+  1240→              <div className="flex justify-between"><span className="text-muted-foreground">Résultats web</span><span className="font-semibold">{searchResults.totalResults}</span></div>
+  1241→              <div className="flex justify-between"><span className="text-emerald-600">Hôtels ajoutés</span><span className="font-semibold text-emerald-600">{searchResults.hotelsAdded}</span></div>
+  1242→              <div className="flex justify-between"><span className="text-amber-600">Ignorés (doublons)</span><span className="font-semibold text-amber-600">{searchResults.hotelsSkipped}</span></div>
+  1243→            </div>
+  1244→          )}
+  1245→        </CardContent>
+  1246→      </Card>
+  1247→
+  1248→      {/* Collection Log */}
+  1249→      {results && results.details.length > 0 && (
+  1250→        <Card>
+  1251→          <CardHeader>
+  1252→            <CardTitle className="text-sm flex items-center gap-2">
+  1253→              <Info className="h-4 w-4 text-guinea-green" />
+  1254→              Journal de collecte
+  1255→            </CardTitle>
+  1256→          </CardHeader>
+  1257→          <CardContent>
+  1258→            <ScrollArea className="max-h-64">
+  1259→              <div className="space-y-1">
+  1260→                {results.details.map((detail, i) => (
+  1261→                  <div key={i} className={`text-xs py-1 px-2 rounded ${detail.startsWith('Error') || detail.startsWith('Search failed') ? 'bg-red-50 text-red-700' : detail.startsWith('Added') ? 'bg-emerald-50 text-emerald-700' : detail.startsWith('Updated') ? 'bg-blue-50 text-blue-700' : 'bg-muted/50'}`}>
+  1262→                    {detail}
+  1263→                  </div>
+  1264→                ))}
+  1265→              </div>
+  1266→            </ScrollArea>
+  1267→          </CardContent>
+  1268→        </Card>
+  1269→      )}
+  1270→    </div>
+  1271→  )
+  1272→}
+  1273→
+  1274→// ============================================================================
+  1275→// PROSPECTS HOT PAGE
+  1276→// ============================================================================
+  1277→
+  1278→function ProspectsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) {
+  1279→  const [hotels, setHotels] = useState<Hotel[]>([])
+  1280→  const [loading, setLoading] = useState(true)
+  1281→  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  1282→
+  1283→  const fetchProspects = useCallback(async () => {
+  1284→    setLoading(true)
+  1285→    try {
+  1286→      const res = await fetch('/api/hotels?statusDigital=none&limit=50&sortBy=score&sortOrder=desc')
+  1287→      if (res.ok) {
+  1288→        const data = await res.json()
+  1289→        setHotels(data.hotels)
+  1290→      }
+  1291→      // Also fetch partial
+  1292→      const res2 = await fetch('/api/hotels?statusDigital=partial&limit=50&sortBy=score&sortOrder=desc')
+  1293→      if (res2.ok) {
+  1294→        const data2 = await res2.json()
+  1295→        setHotels(prev => [...prev, ...data2.hotels].sort((a, b) => b.score - a.score))
+  1296→      }
+  1297→    } catch {
+  1298→      toast({ title: 'Erreur', description: 'Impossible de charger les prospects', variant: 'destructive' })
+  1299→    } finally {
+  1300→      setLoading(false)
+  1301→    }
+  1302→  }, [toast])
+  1303→
+  1304→  useEffect(() => { fetchProspects() }, [fetchProspects])
+  1305→
+  1306→  const toggleSelect = (id: string) => {
+  1307→    setSelectedIds(prev => {
+  1308→      const next = new Set(prev)
+  1309→      if (next.has(id)) next.delete(id)
+  1310→      else next.add(id)
+  1311→      return next
+  1312→    })
+  1313→  }
+  1314→
+  1315→  const toggleAll = () => {
+  1316→    if (selectedIds.size === hotels.length) {
+  1317→      setSelectedIds(new Set())
+  1318→    } else {
+  1319→      setSelectedIds(new Set(hotels.map(h => h.id)))
+  1320→    }
+  1321→  }
+  1322→
+  1323→  return (
+  1324→    <div className="space-y-4">
+  1325→      <div className="flex items-center justify-between">
+  1326→        <div>
+  1327→          <h2 className="text-lg font-semibold flex items-center gap-2">
+  1328→            <Flame className="h-5 w-5 text-guinea-red" />
+  1329→            Prospects HOT
+  1330→          </h2>
+  1331→          <p className="text-xs text-muted-foreground">Hôtels sans site web ou présence digitale partielle — {hotels.length} prospects</p>
+  1332→        </div>
+  1333→        <div className="flex gap-2">
+  1334→          {selectedIds.size > 0 && (
+  1335→            <Badge variant="outline" className="h-8 px-3">{selectedIds.size} sélectionné(s)</Badge>
+  1336→          )}
+  1337→          <Button variant="outline" size="sm" onClick={fetchProspects}>
+  1338→            <RefreshCw className="h-3.5 w-3.5 mr-1" /> Actualiser
+  1339→          </Button>
+  1340→        </div>
+  1341→      </div>
+  1342→
+  1343→      {loading ? (
+  1344→        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  1345→          {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
+  1346→        </div>
+  1347→      ) : hotels.length === 0 ? (
+  1348→        <Card>
+  1349→          <CardContent className="py-12 text-center text-muted-foreground">
+  1350→            <CheckCircle2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+  1351→            <p>Aucun prospect HOT trouvé</p>
+  1352→            <p className="text-xs mt-1">Tous les hôtels ont une présence digitale complète !</p>
+  1353→          </CardContent>
+  1354→        </Card>
+  1355→      ) : (
+  1356→        <div className="space-y-3">
+  1357→          <div className="flex items-center gap-2 px-1">
+  1358→            <input
+  1359→              type="checkbox"
+  1360→              checked={selectedIds.size === hotels.length && hotels.length > 0}
+  1361→              onChange={toggleAll}
+  1362→              className="rounded border-gray-300"
+  1363→            />
+  1364→            <span className="text-xs text-muted-foreground">Tout sélectionner</span>
+  1365→          </div>
+  1366→          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+  1367→            {hotels.map((hotel) => (
+  1368→              <Card key={hotel.id} className={`transition-colors ${selectedIds.has(hotel.id) ? 'border-guinea-green ring-1 ring-guinea-green/30' : ''}`}>
+  1369→                <CardContent className="pt-4">
+  1370→                  <div className="flex items-start gap-3">
+  1371→                    <input
+  1372→                      type="checkbox"
+  1373→                      checked={selectedIds.has(hotel.id)}
+  1374→                      onChange={() => toggleSelect(hotel.id)}
+  1375→                      className="mt-1 rounded border-gray-300"
+  1376→                    />
+  1377→                    <div className="flex-1 min-w-0">
+  1378→                      <div className="flex items-center justify-between">
+  1379→                        <h3 className="font-medium text-sm truncate">{hotel.name}</h3>
+  1380→                        <Badge variant="outline" className={`text-[10px] shrink-0 ml-2 ${PRIORITY_COLORS[hotel.priority]}`}>
+  1381→                          {hotel.priority.toUpperCase()}
+  1382→                        </Badge>
+  1383→                      </div>
+  1384→                      <p className="text-xs text-muted-foreground mt-0.5">
+  1385→                        <MapPin className="h-3 w-3 inline mr-1" />{hotel.city}, {hotel.region}
+  1386→                      </p>
+  1387→                      <div className="flex items-center gap-2 mt-2">
+  1388→                        <Badge variant="outline" className={`text-[10px] ${DIGITAL_STATUS_COLORS[hotel.statusDigital]}`}>
+  1389→                          {DIGITAL_STATUS_LABELS[hotel.statusDigital]}
+  1390→                        </Badge>
+  1391→                        <span className={`text-xs font-semibold ${getScoreColor(hotel.score)}`}>{hotel.score}/100</span>
+  1392→                        {hotel.stars > 0 && (
+  1393→                          <div className="flex">
+  1394→                            {Array.from({ length: Math.min(hotel.stars, 5) }).map((_, i) => (
+  1395→                              <Star key={i} className="h-2.5 w-2.5 fill-guinea-gold text-guinea-gold" />
+  1396→                            ))}
+  1397→                          </div>
+  1398→                        )}
+  1399→                      </div>
+  1400→                      <div className="flex gap-2 mt-3">
+  1401→                        {hotel.phone && (
+  1402→                          <a href={`tel:${hotel.phone}`} className="text-xs flex items-center gap-1 text-guinea-green hover:underline">
+  1403→                            <Phone className="h-3 w-3" /> Appeler
+  1404→                          </a>
+  1405→                        )}
+  1406→                        {hotel.email && (
+  1407→                          <a href={`mailto:${hotel.email}`} className="text-xs flex items-center gap-1 text-guinea-green hover:underline">
+  1408→                            <Mail className="h-3 w-3" /> Email
+  1409→                          </a>
+  1410→                        )}
+  1411→                        {hotel.wa && (
+  1412→                          <a href={`https://wa.me/${hotel.wa.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-xs flex items-center gap-1 text-guinea-green hover:underline">
+  1413→                            <MessageSquare className="h-3 w-3" /> WhatsApp
+  1414→                          </a>
+  1415→                        )}
+  1416→                      </div>
+  1417→                    </div>
+  1418→                  </div>
+  1419→                </CardContent>
+  1420→              </Card>
+  1421→            ))}
+  1422→          </div>
+  1423→        </div>
+  1424→      )}
+  1425→    </div>
+  1426→  )
+  1427→}
+  1428→
+  1429→// ============================================================================
+  1430→// PIPELINE CRM PAGE
+  1431→// ============================================================================
+  1432→
+  1433→function PipelinePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) {
+  1434→  const [stages, setStages] = useState<PipelineStage[]>([])
+  1435→  const [loading, setLoading] = useState(true)
+  1436→  const [movingId, setMovingId] = useState<string | null>(null)
+  1437→
+  1438→  const fetchPipeline = useCallback(async () => {
+  1439→    setLoading(true)
+  1440→    try {
+  1441→      const res = await fetch('/api/pipeline')
+  1442→      if (res.ok) {
+  1443→        const data = await res.json()
+  1444→        setStages(data.stages)
+  1445→      }
+  1446→    } catch {
+  1447→      toast({ title: 'Erreur', description: 'Impossible de charger le pipeline', variant: 'destructive' })
+  1448→    } finally {
+  1449→      setLoading(false)
+  1450→    }
+  1451→  }, [toast])
+  1452→
+  1453→  useEffect(() => { fetchPipeline() }, [fetchPipeline])
+  1454→
+  1455→  const moveStage = async (hotelId: string, newStage: string) => {
+  1456→    setMovingId(hotelId)
+  1457→    try {
+  1458→      const res = await fetch('/api/pipeline', {
+  1459→        method: 'PUT',
+  1460→        headers: { 'Content-Type': 'application/json' },
+  1461→        body: JSON.stringify({ hotelId, stage: newStage }),
+  1462→      })
+  1463→      if (res.ok) {
+  1464→        toast({ title: 'Déplacé', description: `Hôtel déplacé vers ${STAGE_LABELS[newStage]}` })
+  1465→        fetchPipeline()
+  1466→      }
+  1467→    } catch {
+  1468→      toast({ title: 'Erreur', description: 'Impossible de déplacer', variant: 'destructive' })
+  1469→    } finally {
+  1470→      setMovingId(null)
+  1471→    }
+  1472→  }
+  1473→
+  1474→  const stageOrder = ['nouveau', 'contacte', 'interesse', 'proposal', 'client']
+  1475→
+  1476→  if (loading) {
+  1477→    return (
+  1478→      <div className="grid grid-cols-5 gap-3">
+  1479→        {Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} />)}
+  1480→      </div>
+  1481→    )
+  1482→  }
+  1483→
+  1484→  return (
+  1485→    <div className="space-y-4">
+  1486→      <div className="flex items-center justify-between">
+  1487→        <div>
+  1488→          <h2 className="text-lg font-semibold flex items-center gap-2">
+  1489→            <GitBranch className="h-5 w-5 text-guinea-green" />
+  1490→            Pipeline CRM
+  1491→          </h2>
+  1492→          <p className="text-xs text-muted-foreground">Glissez les hôtels entre les étapes du pipeline</p>
+  1493→        </div>
+  1494→        <Button variant="outline" size="sm" onClick={fetchPipeline}>
+  1495→          <RefreshCw className="h-3.5 w-3.5 mr-1" /> Actualiser
+  1496→        </Button>
+  1497→      </div>
+  1498→
+  1499→      <div className="flex gap-3 overflow-x-auto pb-4">
+  1500→        {stageOrder.map((stageKey) => {
+  1501→          const stage = stages.find(s => s.stage === stageKey)
+  1502→          const hotels = stage?.hotels ?? []
+  1503→          return (
+  1504→            <div key={stageKey} className="min-w-[220px] flex-1">
+  1505→              {/* Stage Header */}
+  1506→              <div className={`rounded-t-lg px-3 py-2 ${STAGE_COLORS[stageKey]} border font-semibold text-sm flex items-center justify-between`}>
+  1507→                <span>{STAGE_LABELS[stageKey]}</span>
+  1508→                <Badge variant="secondary" className="text-xs h-5">{stage?.count ?? 0}</Badge>
+  1509→              </div>
+  1510→              {/* Stage Body */}
+  1511→              <div className="bg-muted/30 rounded-b-lg border border-t-0 min-h-[300px] p-2 space-y-2">
+  1512→                {hotels.length === 0 ? (
+  1513→                  <p className="text-xs text-muted-foreground text-center py-4">Aucun hôtel</p>
+  1514→                ) : (
+  1515→                  hotels.map((hotel) => (
+  1516→                    <div key={hotel.id} className="kanban-card bg-card rounded-lg border p-3 cursor-pointer">
+  1517→                      <div className="flex items-start justify-between">
+  1518→                        <h4 className="font-medium text-xs leading-tight">{hotel.name}</h4>
+  1519→                        <Badge variant="outline" className={`text-[8px] shrink-0 ml-1 ${PRIORITY_COLORS[hotel.priority]}`}>
+  1520→                          {hotel.priority.toUpperCase()}
+  1521→                        </Badge>
+  1522→                      </div>
+  1523→                      <p className="text-[10px] text-muted-foreground mt-1">
+  1524→                        <MapPin className="h-2.5 w-2.5 inline mr-0.5" />{hotel.city}
+  1525→                      </p>
+  1526→                      <div className="flex items-center justify-between mt-2">
+  1527→                        <span className={`text-[10px] font-semibold ${getScoreColor(hotel.score)}`}>{hotel.score}/100</span>
+  1528→                        <div className="flex gap-0.5">
+  1529→                          {/* Move left */}
+  1530→                          {stageOrder.indexOf(stageKey) > 0 && (
+  1531→                            <Button
+  1532→                              variant="ghost"
+  1533→                              size="icon"
+  1534→                              className="h-5 w-5"
+  1535→                              disabled={movingId === hotel.id}
+  1536→                              onClick={() => moveStage(hotel.id, stageOrder[stageOrder.indexOf(stageKey) - 1])}
+  1537→                            >
+  1538→                              <ChevronLeft className="h-3 w-3" />
+  1539→                            </Button>
+  1540→                          )}
+  1541→                          {/* Move right */}
+  1542→                          {stageOrder.indexOf(stageKey) < stageOrder.length - 1 && (
+  1543→                            <Button
+  1544→                              variant="ghost"
+  1545→                              size="icon"
+  1546→                              className="h-5 w-5"
+  1547→                              disabled={movingId === hotel.id}
+  1548→                              onClick={() => moveStage(hotel.id, stageOrder[stageOrder.indexOf(stageKey) + 1])}
+  1549→                            >
+  1550→                              <ChevronRight className="h-3 w-3" />
+  1551→                            </Button>
+  1552→                          )}
+  1553→                        </div>
+  1554→                      </div>
+  1555→                    </div>
+  1556→                  ))
+  1557→                )}
+  1558→              </div>
+  1559→            </div>
+  1560→          )
+  1561→        })}
+  1562→      </div>
+  1563→    </div>
+  1564→  )
+  1565→}
+  1566→
+  1567→// ============================================================================
+  1568→// ANALYSE IA PAGE
+  1569→// ============================================================================
+  1570→
+  1571→function AnalyseIAPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) {
+  1572→  const [providers, setProviders] = useState<AIProvider[]>([])
+  1573→  const [hotels, setHotels] = useState<Hotel[]>([])
+  1574→  const [selectedHotelId, setSelectedHotelId] = useState('')
+  1575→  const [selectedProvider, setSelectedProvider] = useState('')
+  1576→  const [prompt, setPrompt] = useState('')
+  1577→  const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'assistant'; content: string; provider?: string }[]>([])
+  1578→  const [sending, setSending] = useState(false)
+  1579→  const [loadingProviders, setLoadingProviders] = useState(true)
+  1580→  const chatEndRef = useRef<HTMLDivElement>(null)
+  1581→
+  1582→  const fetchProviders = useCallback(async () => {
+  1583→    setLoadingProviders(true)
+  1584→    try {
+  1585→      const res = await fetch('/api/ai/providers')
+  1586→      if (res.ok) {
+  1587→        const data = await res.json()
+  1588→        setProviders(data.providers)
+  1589→      }
+  1590→    } catch {
+  1591→      /* ignore */
+  1592→    } finally {
+  1593→      setLoadingProviders(false)
+  1594→    }
+  1595→  }, [])
+  1596→
+  1597→  const fetchHotels = useCallback(async () => {
+  1598→    try {
+  1599→      const res = await fetch('/api/hotels?limit=100&sortBy=name&sortOrder=asc')
+  1600→      if (res.ok) {
+  1601→        const data = await res.json()
+  1602→        setHotels(data.hotels)
+  1603→      }
+  1604→    } catch {
+  1605→      /* ignore */
+  1606→    }
+  1607→  }, [])
+  1608→
+  1609→  useEffect(() => { fetchProviders(); fetchHotels() }, [fetchProviders, fetchHotels])
+  1610→
+  1611→  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [chatHistory])
+  1612→
+  1613→  const configuredProviders = providers.filter(p => p.configured)
+  1614→
+  1615→  const handleSend = async () => {
+  1616→    if (!prompt.trim()) return
+  1617→    setSending(true)
+  1618→    const userMsg = prompt
+  1619→    setChatHistory(prev => [...prev, { role: 'user', content: userMsg }])
+  1620→    setPrompt('')
+  1621→
+  1622→    try {
+  1623→      const body: { prompt: string; hotelId?: string; preferredProvider?: string } = { prompt: userMsg }
+  1624→      if (selectedHotelId) body.hotelId = selectedHotelId
+  1625→      if (selectedProvider) body.preferredProvider = selectedProvider
+  1626→
+  1627→      const res = await fetch('/api/ai/chat', {
+  1628→        method: 'POST',
+  1629→        headers: { 'Content-Type': 'application/json' },
+  1630→        body: JSON.stringify(body),
+  1631→      })
+  1632→
+  1633→      if (res.ok) {
+  1634→        const data = await res.json()
+  1635→        setChatHistory(prev => [...prev, { role: 'assistant', content: data.text, provider: data.providerName }])
+  1636→      } else {
+  1637→        const data = await res.json()
+  1638→        setChatHistory(prev => [...prev, { role: 'assistant', content: `❌ Erreur: ${data.error || 'Réponse invalide'}` }])
+  1639→      }
+  1640→    } catch {
+  1641→      setChatHistory(prev => [...prev, { role: 'assistant', content: '❌ Erreur de connexion au serveur' }])
+  1642→    } finally {
+  1643→      setSending(false)
+  1644→    }
+  1645→  }
+  1646→
+  1647→  const applyTemplate = (templatePrompt: string) => {
+  1648→    const hotel = hotels.find(h => h.id === selectedHotelId)
+  1649→    let finalPrompt = templatePrompt
+  1650→    if (hotel) {
+  1651→      finalPrompt += `\n\nHôtel: ${hotel.name}\nVille: ${hotel.city}, ${hotel.region}\nSite web: ${hotel.web || 'Aucun'}\nTéléphone: ${hotel.phone || 'Non renseigné'}\nEmail: ${hotel.email || 'Non renseigné'}\nStatut digital: ${DIGITAL_STATUS_LABELS[hotel.statusDigital]}\nScore: ${hotel.score}/100`
+  1652→    }
+  1653→    setPrompt(finalPrompt)
+  1654→  }
+  1655→
+  1656→  return (
+  1657→    <div className="space-y-4">
+  1658→      {/* Provider Pills */}
+  1659→      <Card>
+  1660→        <CardContent className="pt-4 pb-4">
+  1661→          <div className="flex items-center gap-2 flex-wrap">
+  1662→            <span className="text-xs text-muted-foreground">Fournisseurs IA:</span>
+  1663→            {loadingProviders ? (
+  1664→              <Skeleton className="h-6 w-24" />
+  1665→            ) : providers.length === 0 ? (
+  1666→              <span className="text-xs text-muted-foreground">Aucun configuré</span>
+  1667→            ) : (
+  1668→              providers.map((p) => (
+  1669→                <Badge
+  1670→                  key={p.id}
+  1671→                  variant={p.configured ? 'default' : 'outline'}
+  1672→                  className={`text-xs cursor-pointer ${p.configured ? 'bg-guinea-green' : 'opacity-50'}`}
+  1673→                  onClick={() => p.configured && setSelectedProvider(selectedProvider === p.id ? '' : p.id)}
+  1674→                >
+  1675→                  {p.name}
+  1676→                  {p.free && <span className="ml-1 text-[9px] opacity-80">gratuit</span>}
+  1677→                  {p.configured && <Check className="h-3 w-3 ml-1" />}
+  1678→                </Badge>
+  1679→              ))
+  1680→            )}
+  1681→          </div>
+  1682→        </CardContent>
+  1683→      </Card>
+  1684→
+  1685→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  1686→        {/* Left Panel: Selection */}
+  1687→        <div className="space-y-4">
+  1688→          <Card>
+  1689→            <CardHeader className="pb-2">
+  1690→              <CardTitle className="text-sm flex items-center gap-2">
+  1691→                <Building2 className="h-4 w-4 text-guinea-green" />
+  1692→                Sélection hôtel
+  1693→              </CardTitle>
+  1694→            </CardHeader>
+  1695→            <CardContent>
+  1696→              <Select value={selectedHotelId} onValueChange={setSelectedHotelId}>
+  1697→                <SelectTrigger><SelectValue placeholder="Choisir un hôtel..." /></SelectTrigger>
+  1698→                <SelectContent className="max-h-64">
+  1699→                  {hotels.map((h) => (
+  1700→                    <SelectItem key={h.id} value={h.id}>{h.name} — {h.city}</SelectItem>
+  1701→                  ))}
+  1702→                </SelectContent>
+  1703→              </Select>
+  1704→              {selectedHotelId && (() => {
+  1705→                const h = hotels.find(h => h.id === selectedHotelId)
+  1706→                if (!h) return null
+  1707→                return (
+  1708→                  <div className="mt-3 p-3 bg-muted/50 rounded-lg text-xs space-y-1">
+  1709→                    <p className="font-medium">{h.name}</p>
+  1710→                    <p className="text-muted-foreground">{h.city}, {h.region}</p>
+  1711→                    <p>Statut: <Badge variant="outline" className={`text-[9px] ${DIGITAL_STATUS_COLORS[h.statusDigital]}`}>{DIGITAL_STATUS_LABELS[h.statusDigital]}</Badge></p>
+  1712→                    <p>Score: <span className={getScoreColor(h.score)}>{h.score}/100</span></p>
+  1713→                  </div>
+  1714→                )
+  1715→              })()}
+  1716→            </CardContent>
+  1717→          </Card>
+  1718→
+  1719→          <Card>
+  1720→            <CardHeader className="pb-2">
+  1721→              <CardTitle className="text-sm flex items-center gap-2">
+  1722→                <Sparkles className="h-4 w-4 text-guinea-gold" />
+  1723→                Modèles de prompt
+  1724→              </CardTitle>
+  1725→            </CardHeader>
+  1726→            <CardContent className="space-y-2">
+  1727→              {AI_PROMPT_TEMPLATES.map((tmpl) => {
+  1728→                const Icon = tmpl.icon
+  1729→                return (
+  1730→                  <button
+  1731→                    key={tmpl.id}
+  1732→                    className="w-full text-left p-2 rounded-lg border hover:bg-muted/50 transition-colors"
+  1733→                    onClick={() => applyTemplate(tmpl.prompt)}
+  1734→                  >
+  1735→                    <div className="flex items-center gap-2 text-xs font-medium">
+  1736→                      <Icon className="h-3.5 w-3.5 text-guinea-green" />
+  1737→                      {tmpl.label}
+  1738→                    </div>
+  1739→                  </button>
+  1740→                )
+  1741→              })}
+  1742→            </CardContent>
+  1743→          </Card>
+  1744→        </div>
+  1745→
+  1746→        {/* Right Panel: Chat */}
+  1747→        <Card className="lg:col-span-2 flex flex-col">
+  1748→          <CardHeader className="pb-2">
+  1749→            <CardTitle className="text-sm flex items-center gap-2">
+  1750→              <Bot className="h-4 w-4 text-guinea-green" />
+  1751→              Chat IA
+  1752→              {selectedProvider && (
+  1753→                <Badge variant="outline" className="text-[10px] ml-2">
+  1754→                  {providers.find(p => p.id === selectedProvider)?.name || selectedProvider}
+  1755→                </Badge>
+  1756→              )}
+  1757→            </CardTitle>
+  1758→          </CardHeader>
+  1759→          <CardContent className="flex-1 flex flex-col min-h-[400px]">
+  1760→            {/* Chat messages */}
+  1761→            <ScrollArea className="flex-1 mb-3">
+  1762→              <div className="space-y-3 pr-4">
+  1763→                {chatHistory.length === 0 && (
+  1764→                  <div className="text-center py-8 text-muted-foreground">
+  1765→                    <Bot className="h-10 w-10 mx-auto mb-2 opacity-30" />
+  1766→                    <p className="text-sm">Sélectionnez un hôtel et posez une question</p>
+  1767→                    <p className="text-xs mt-1">ou utilisez un modèle de prompt</p>
+  1768→                  </div>
+  1769→                )}
+  1770→                {chatHistory.map((msg, i) => (
+  1771→                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+  1772→                    <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+  1773→                      msg.role === 'user'
+  1774→                        ? 'bg-guinea-green text-white'
+  1775→                        : 'bg-muted'
+  1776→                    }`}>
+  1777→                      {msg.role === 'assistant' && msg.provider && (
+  1778→                        <div className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
+  1779→                          <Bot className="h-3 w-3" /> {msg.provider}
+  1780→                        </div>
+  1781→                      )}
+  1782→                      <div className="whitespace-pre-wrap text-xs leading-relaxed">{msg.content}</div>
+  1783→                    </div>
+  1784→                  </div>
+  1785→                ))}
+  1786→                {sending && (
+  1787→                  <div className="flex justify-start">
+  1788→                    <div className="bg-muted rounded-lg px-3 py-2">
+  1789→                      <Loader2 className="h-4 w-4 animate-spin text-guinea-green" />
+  1790→                    </div>
+  1791→                  </div>
+  1792→                )}
+  1793→                <div ref={chatEndRef} />
+  1794→              </div>
+  1795→            </ScrollArea>
+  1796→
+  1797→            {/* Input */}
+  1798→            <div className="flex gap-2">
+  1799→              <Textarea
+  1800→                placeholder="Posez votre question ou utilisez un modèle..."
+  1801→                className="resize-none min-h-[60px] max-h-[120px]"
+  1802→                value={prompt}
+  1803→                onChange={(e) => setPrompt(e.target.value)}
+  1804→                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+  1805→                disabled={sending}
+  1806→              />
+  1807→              <Button className="bg-guinea-green hover:bg-guinea-green-light self-end" onClick={handleSend} disabled={sending || !prompt.trim()}>
+  1808→                <Send className="h-4 w-4" />
+  1809→              </Button>
+  1810→            </div>
+  1811→          </CardContent>
+  1812→        </Card>
+  1813→      </div>
+  1814→    </div>
+  1815→  )
+  1816→}
+  1817→
+  1818→// ============================================================================
+  1819→// SETTINGS PAGE
+  1820→// ============================================================================
+  1821→
+  1822→function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) {
+  1823→  const [providers, setProviders] = useState<AIProvider[]>([])
+  1824→  const [loading, setLoading] = useState(true)
+  1825→  const [apiKeys, setApiKeys] = useState<Record<string, string>>({})
+  1826→  const [saving, setSaving] = useState<string | null>(null)
+  1827→  const [stats, setStats] = useState<Stats | null>(null)
+  1828→
+  1829→  const fetchProviders = useCallback(async () => {
+  1830→    setLoading(true)
+  1831→    try {
+  1832→      const res = await fetch('/api/ai/providers')
+  1833→      if (res.ok) {
+  1834→        const data = await res.json()
+  1835→        setProviders(data.providers)
+  1836→      }
+  1837→    } catch {
+  1838→      /* ignore */
+  1839→    } finally {
+  1840→      setLoading(false)
+  1841→    }
+  1842→  }, [])
+  1843→
+  1844→  const fetchStats = useCallback(async () => {
+  1845→    try {
+  1846→      const res = await fetch('/api/stats')
+  1847→      if (res.ok) setStats(await res.json())
+  1848→    } catch {
+  1849→      /* ignore */
+  1850→    }
+  1851→  }, [])
+  1852→
+  1853→  useEffect(() => { fetchProviders(); fetchStats() }, [fetchProviders, fetchStats])
+  1854→
+  1855→  const handleSaveKey = async (providerId: string) => {
+  1856→    const key = apiKeys[providerId]
+  1857→    if (!key?.trim()) return
+  1858→    setSaving(providerId)
+  1859→    try {
+  1860→      const res = await fetch('/api/ai/providers', {
+  1861→        method: 'POST',
+  1862→        headers: { 'Content-Type': 'application/json' },
+  1863→        body: JSON.stringify({ providerId, apiKey: key }),
+  1864→      })
+  1865→      if (res.ok) {
+  1866→        toast({ title: 'Clé sauvegardée', description: `Clé API ${providerId} configurée avec succès` })
+  1867→        setApiKeys(prev => ({ ...prev, [providerId]: '' }))
+  1868→        fetchProviders()
+  1869→      } else {
+  1870→        const data = await res.json()
+  1871→        toast({ title: 'Erreur', description: data.error || 'Impossible de sauvegarder', variant: 'destructive' })
+  1872→      }
+  1873→    } catch {
+  1874→      toast({ title: 'Erreur', description: 'Connexion impossible', variant: 'destructive' })
+  1875→    } finally {
+  1876→      setSaving(null)
+  1877→    }
+  1878→  }
+  1879→
+  1880→  const handleDeleteKey = async (providerId: string) => {
+  1881→    try {
+  1882→      const res = await fetch(`/api/ai/providers/${providerId}`, { method: 'DELETE' })
+  1883→      if (res.ok) {
+  1884→        toast({ title: 'Clé supprimée', description: `Clé API ${providerId} retirée` })
+  1885→        fetchProviders()
+  1886→      }
+  1887→    } catch {
+  1888→      toast({ title: 'Erreur', description: 'Impossible de supprimer', variant: 'destructive' })
+  1889→    }
+  1890→  }
+  1891→
+  1892→  return (
+  1893→    <div className="space-y-6">
+  1894→      <Tabs defaultValue="ai">
+  1895→        <TabsList>
+  1896→          <TabsTrigger value="ai"><Brain className="h-4 w-4 mr-1" /> Fournisseurs IA</TabsTrigger>
+  1897→          <TabsTrigger value="agency"><Building2 className="h-4 w-4 mr-1" /> Agence</TabsTrigger>
+  1898→          <TabsTrigger value="database"><Settings className="h-4 w-4 mr-1" /> Base de données</TabsTrigger>
+  1899→        </TabsList>
+  1900→
+  1901→        {/* AI Providers Tab */}
+  1902→        <TabsContent value="ai" className="space-y-4">
+  1903→          <div className="flex items-center justify-between">
+  1904→            <div>
+  1905→              <h3 className="text-sm font-semibold">Fournisseurs d&apos;IA</h3>
+  1906→              <p className="text-xs text-muted-foreground">Configurez vos clés API pour activer l&apos;analyse IA. {providers.filter(p => p.configured).length}/{providers.length} configurés</p>
+  1907→            </div>
+  1908→          </div>
+  1909→
+  1910→          {loading ? (
+  1911→            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  1912→              {Array.from({ length: 7 }).map((_, i) => <CardSkeleton key={i} />)}
+  1913→            </div>
+  1914→          ) : (
+  1915→            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  1916→              {providers.map((provider) => (
+  1917→                <Card key={provider.id} className={provider.configured ? 'border-guinea-green/30' : ''}>
+  1918→                  <CardContent className="pt-4">
+  1919→                    <div className="flex items-center justify-between mb-3">
+  1920→                      <div className="flex items-center gap-2">
+  1921→                        <h4 className="text-sm font-semibold">{provider.name}</h4>
+  1922→                        {provider.free && <Badge variant="outline" className="text-[9px] bg-emerald-50 text-emerald-600">Gratuit</Badge>}
+  1923→                      </div>
+  1924→                      {provider.configured ? (
+  1925→                        <Badge className="bg-guinea-green text-[10px]">
+  1926→                          <Check className="h-3 w-3 mr-1" /> Configuré
+  1927→                        </Badge>
+  1928→                      ) : (
+  1929→                        <Badge variant="outline" className="text-[10px] text-muted-foreground">Non configuré</Badge>
+  1930→                      )}
+  1931→                    </div>
+  1932→                    <p className="text-xs text-muted-foreground mb-1">Modèle: {provider.defaultModel}</p>
+  1933→                    {provider.keyPrefix && <p className="text-xs text-muted-foreground mb-2">Préfixe clé: <code className="bg-muted px-1 rounded">{provider.keyPrefix}</code></p>}
+  1934→                    {provider.configured && provider.keyHint && (
+  1935→                      <p className="text-xs text-muted-foreground mb-2">Clé: <code className="bg-muted px-1 rounded">{provider.keyHint}</code></p>
+  1936→                    )}
+  1937→                    <div className="flex gap-2 mt-3">
+  1938→                      <Input
+  1939→                        type="password"
+  1940→                        placeholder={provider.configured ? 'Nouvelle clé API...' : 'Clé API...'}
+  1941→                        className="text-xs"
+  1942→                        value={apiKeys[provider.id] || ''}
+  1943→                        onChange={(e) => setApiKeys(prev => ({ ...prev, [provider.id]: e.target.value }))}
+  1944→                        onKeyDown={(e) => e.key === 'Enter' && handleSaveKey(provider.id)}
+  1945→                      />
+  1946→                      <Button size="sm" onClick={() => handleSaveKey(provider.id)} disabled={saving === provider.id || !apiKeys[provider.id]?.trim()}>
+  1947→                        {saving === provider.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+  1948→                      </Button>
+  1949→                      {provider.configured && (
+  1950→                        <Button variant="outline" size="sm" onClick={() => handleDeleteKey(provider.id)} className="text-destructive">
+  1951→                          <Trash2 className="h-3 w-3" />
+  1952→                        </Button>
+  1953→                      )}
+  1954→                    </div>
+  1955→                  </CardContent>
+  1956→                </Card>
+  1957→              ))}
+  1958→            </div>
+  1959→          )}
+  1960→        </TabsContent>
+  1961→
+  1962→        {/* Agency Tab */}
+  1963→        <TabsContent value="agency" className="space-y-4">
+  1964→          <Card>
+  1965→            <CardHeader>
+  1966→              <CardTitle className="text-sm">Informations de l&apos;agence</CardTitle>
+  1967→              <CardDescription className="text-xs">Ces informations seront utilisées dans les communications de prospection</CardDescription>
+  1968→            </CardHeader>
+  1969→            <CardContent className="space-y-4">
+  1970→              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  1971→                <div>
+  1972→                  <Label className="text-xs">Nom de l&apos;agence</Label>
+  1973→                  <Input placeholder="HotelScout Guinea" className="mt-1" />
+  1974→                </div>
+  1975→                <div>
+  1976→                  <Label className="text-xs">Email de contact</Label>
+  1977→                  <Input placeholder="contact@hotelscout-gn.com" className="mt-1" />
+  1978→                </div>
+  1979→                <div>
+  1980→                  <Label className="text-xs">Téléphone</Label>
+  1981→                  <Input placeholder="+224 XXX XXX XXX" className="mt-1" />
+  1982→                </div>
+  1983→                <div>
+  1984→                  <Label className="text-xs">Site web</Label>
+  1985→                  <Input placeholder="https://hotelscout-gn.com" className="mt-1" />
+  1986→                </div>
+  1987→              </div>
+  1988→              <Button className="bg-guinea-green hover:bg-guinea-green-light">Sauvegarder</Button>
+  1989→            </CardContent>
+  1990→          </Card>
+  1991→        </TabsContent>
+  1992→
+  1993→        {/* Database Tab */}
+  1994→        <TabsContent value="database" className="space-y-4">
+  1995→          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  1996→            <Card>
+  1997→              <CardHeader>
+  1998→                <CardTitle className="text-sm">Statistiques de la base</CardTitle>
+  1999→              </CardHeader>
+  2000→              <CardContent>
+  2001→                {stats ? (
+  2002→                  <div className="space-y-2 text-sm">
+  2003→                    <div className="flex justify-between"><span className="text-muted-foreground">Total hôtels</span><span className="font-semibold">{formatNumber(stats.totalHotels)}</span></div>
+  2004→                    <div className="flex justify-between"><span className="text-muted-foreground">Avec site web</span><span className="font-semibold">{formatNumber(stats.hotelsWithWebsite)}</span></div>
+  2005→                    <div className="flex justify-between"><span className="text-muted-foreground">Avec téléphone</span><span className="font-semibold">{formatNumber(stats.hotelsWithPhone)}</span></div>
+  2006→                    <div className="flex justify-between"><span className="text-muted-foreground">Avec email</span><span className="font-semibold">{formatNumber(stats.hotelsWithEmail)}</span></div>
+  2007→                    <Separator />
+  2008→                    <div className="flex justify-between"><span className="text-muted-foreground">Total contacts</span><span className="font-semibold">{formatNumber(stats.totalContacts)}</span></div>
+  2009→                    <div className="flex justify-between"><span className="text-muted-foreground">Contacts (7 jours)</span><span className="font-semibold">{formatNumber(stats.recentContactsCount)}</span></div>
+  2010→                    <div className="flex justify-between"><span className="text-muted-foreground">Prêt digital</span><span className="font-semibold">{stats.digitalReadiness}%</span></div>
+  2011→                  </div>
+  2012→                ) : (
+  2013→                  <TableSkeleton rows={7} />
+  2014→                )}
+  2015→              </CardContent>
+  2016→            </Card>
+  2017→
+  2018→            <Card>
+  2019→              <CardHeader>
+  2020→                <CardTitle className="text-sm">Actions de maintenance</CardTitle>
+  2021→              </CardHeader>
+  2022→              <CardContent className="space-y-3">
+  2023→                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { fetch('/api/hotels/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verifyAll: true }) }); toast({ title: 'Vérification lancée' }) }}>
+  2024→                  <RefreshCw className="h-3.5 w-3.5 mr-2" /> Vérifier toutes les URLs
+  2025→                </Button>
+  2026→                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { fetch('/api/hotels/enrich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enrichAllMissing: true }) }); toast({ title: 'Enrichissement lancé' }) }}>
+  2027→                  <Sparkles className="h-3.5 w-3.5 mr-2" /> Enrichir les données manquantes
+  2028→                </Button>
+  2029→                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { fetch('/api/cron/collect', { method: 'POST' }); toast({ title: 'Collecte lancée' }) }}>
+  2030→                  <Search className="h-3.5 w-3.5 mr-2" /> Lancer la collecte automatique
+  2031→                </Button>
+  2032→                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { window.open('/api/export', '_blank'); toast({ title: 'Export lancé' }) }}>
+  2033→                  <Download className="h-3.5 w-3.5 mr-2" /> Exporter la base en CSV
+  2034→                </Button>
+  2035→              </CardContent>
+  2036→            </Card>
+  2037→          </div>
+  2038→        </TabsContent>
+  2039→      </Tabs>
+  2040→    </div>
+  2041→  )
+  2042→}
+  2043→
+  2044→// ============================================================================
+  2045→// MAIN PAGE COMPONENT
+  2046→// ============================================================================
+  2047→
+  2048→export default function Home() {
+  2049→  const [activePage, setActivePage] = useState<PageType>('dashboard')
+  2050→  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  2051→  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  2052→  const [stats, setStats] = useState<Stats | null>(null)
+  2053→  const [statsLoading, setStatsLoading] = useState(true)
+  2054→  const { toast } = useToast()
+  2055→
+  2056→  // Fetch dashboard stats
+  2057→  const fetchStats = useCallback(async () => {
+  2058→    setStatsLoading(true)
+  2059→    try {
+  2060→      const res = await fetch('/api/stats')
+  2061→      if (res.ok) {
+  2062→        setStats(await res.json())
+  2063→      }
+  2064→    } catch {
+  2065→      /* ignore */
+  2066→    } finally {
+  2067→      setStatsLoading(false)
+  2068→    }
+  2069→  }, [])
+  2070→
+  2071→  useEffect(() => { fetchStats() }, [fetchStats])
+  2072→
+  2073→  // Auto-collapse sidebar on mobile
+  2074→  useEffect(() => {
+  2075→    const handleResize = () => {
+  2076→      if (window.innerWidth < 768) {
+  2077→        setSidebarCollapsed(true)
+  2078→      }
+  2079→    }
+  2080→    handleResize()
+  2081→    window.addEventListener('resize', handleResize)
+  2082→    return () => window.removeEventListener('resize', handleResize)
+  2083→  }, [])
+  2084→
+  2085→  const handlePageChange = (page: PageType) => {
+  2086→    setActivePage(page)
+  2087→    setMobileMenuOpen(false)
+  2088→    if (page === 'dashboard') fetchStats()
+  2089→  }
+  2090→
+  2091→  const renderPage = () => {
+  2092→    switch (activePage) {
+  2093→      case 'dashboard':
+  2094→        return <DashboardPage stats={stats} loading={statsLoading} onNavigate={handlePageChange} />
+  2095→      case 'hotels':
+  2096→        return <HotelsPage toast={toast} />
+  2097→      case 'collecte':
+  2098→        return <CollectePage toast={toast} />
+  2099→      case 'prospects':
+  2100→        return <ProspectsPage toast={toast} />
+  2101→      case 'pipeline':
+  2102→        return <PipelinePage toast={toast} />
+  2103→      case 'ia':
+  2104→        return <AnalyseIAPage toast={toast} />
+  2105→      case 'settings':
+  2106→        return <SettingsPage toast={toast} />
+  2107→      default:
+  2108→        return null
+  2109→    }
+  2110→  }
+  2111→
+  2112→  return (
+  2113→    <div className="flex h-screen overflow-hidden">
+  2114→      {/* Desktop Sidebar */}
+  2115→      <div className="hidden md:flex">
+  2116→        <Sidebar
+  2117→          activePage={activePage}
+  2118→          onPageChange={handlePageChange}
+  2119→          collapsed={sidebarCollapsed}
+  2120→          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+  2121→        />
+  2122→      </div>
+  2123→
+  2124→      {/* Mobile Sidebar */}
+  2125→      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+  2126→        <SheetContent side="left" className="p-0 w-60 bg-sidebar text-sidebar-foreground border-sidebar-border">
+  2127→          <SheetHeader className="sr-only">
+  2128→            <SheetTitle>Navigation</SheetTitle>
+  2129→          </SheetHeader>
+  2130→          <Sidebar
+  2131→            activePage={activePage}
+  2132→            onPageChange={handlePageChange}
+  2133→            collapsed={false}
+  2134→            onToggle={() => setMobileMenuOpen(false)}
+  2135→          />
+  2136→        </SheetContent>
+  2137→      </Sheet>
+  2138→
+  2139→      {/* Main Content */}
+  2140→      <main className="flex-1 flex flex-col overflow-hidden">
+  2141→        {/* Top Bar */}
+  2142→        <header className="h-14 border-b flex items-center gap-3 px-4 bg-card shrink-0">
+  2143→          {/* Mobile Menu Button */}
+  2144→          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+  2145→            <SheetTrigger asChild>
+  2146→              <Button variant="ghost" size="icon" className="md:hidden">
+  2147→                <Menu className="h-5 w-5" />
+  2148→              </Button>
+  2149→            </SheetTrigger>
+  2150→          </Sheet>
+  2151→
+  2152→          {/* Page Title */}
+  2153→          <div className="flex items-center gap-2">
+  2154→            {React.createElement(PAGE_ICONS[activePage], { className: 'h-5 w-5 text-guinea-green' })}
+  2155→            <h1 className="font-semibold text-sm md:text-base">{PAGE_LABELS[activePage]}</h1>
+  2156→          </div>
+  2157→
+  2158→          <div className="flex-1" />
+  2159→
+  2160→          {/* Right side actions */}
+  2161→          <div className="flex items-center gap-2">
+  2162→            <TooltipProvider>
+  2163→              <Tooltip>
+  2164→                <TooltipTrigger asChild>
+  2165→                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={fetchStats}>
+  2166→                    <RefreshCw className="h-4 w-4" />
+  2167→                  </Button>
+  2168→                </TooltipTrigger>
+  2169→                <TooltipContent>Actualiser les données</TooltipContent>
+  2170→              </Tooltip>
+  2171→            </TooltipProvider>
+  2172→            <div className="hidden sm:flex items-center gap-1">
+  2173→              <div className="h-1.5 w-1.5 rounded-full bg-guinea-red" />
+  2174→              <div className="h-1.5 w-1.5 rounded-full bg-guinea-gold" />
+  2175→              <div className="h-1.5 w-1.5 rounded-full bg-guinea-green" />
+  2176→            </div>
+  2177→          </div>
+  2178→        </header>
+  2179→
+  2180→        {/* Page Content */}
+  2181→        <div className="flex-1 overflow-y-auto custom-scrollbar">
+  2182→          <div className="p-4 md:p-6 max-w-7xl mx-auto">
+  2183→            {renderPage()}
+  2184→          </div>
+  2185→        </div>
+  2186→
+  2187→        {/* Footer */}
+  2188→        <footer className="h-8 border-t flex items-center justify-center px-4 bg-card shrink-0">
+  2189→          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+  2190→            <span>HotelScout Guinea v7</span>
+  2191→            <span>•</span>
+  2192→            <span>Prospection Hôtelière Intelligente</span>
+  2193→            <div className="flex gap-0.5 ml-2">
+  2194→              <div className="h-1 w-3 rounded-full bg-guinea-red" />
+  2195→              <div className="h-1 w-3 rounded-full bg-guinea-gold" />
+  2196→              <div className="h-1 w-3 rounded-full bg-guinea-green" />
+  2197→            </div>
+  2198→          </div>
+  2199→        </footer>
+  2200→      </main>
+  2201→    </div>
+  2202→  )
+  2203→}
+  2204→

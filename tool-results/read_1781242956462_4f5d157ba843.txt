@@ -1,0 +1,605 @@
+  1600→      if (res.ok) {
+  1601→        const data = await res.json()
+  1602→        setHotels(data.hotels)
+  1603→      }
+  1604→    } catch {
+  1605→      /* ignore */
+  1606→    }
+  1607→  }, [])
+  1608→
+  1609→  useEffect(() => { fetchProviders(); fetchHotels() }, [fetchProviders, fetchHotels])
+  1610→
+  1611→  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [chatHistory])
+  1612→
+  1613→  const configuredProviders = providers.filter(p => p.configured)
+  1614→
+  1615→  const handleSend = async () => {
+  1616→    if (!prompt.trim()) return
+  1617→    setSending(true)
+  1618→    const userMsg = prompt
+  1619→    setChatHistory(prev => [...prev, { role: 'user', content: userMsg }])
+  1620→    setPrompt('')
+  1621→
+  1622→    try {
+  1623→      const body: { prompt: string; hotelId?: string; preferredProvider?: string } = { prompt: userMsg }
+  1624→      if (selectedHotelId) body.hotelId = selectedHotelId
+  1625→      if (selectedProvider) body.preferredProvider = selectedProvider
+  1626→
+  1627→      const res = await fetch('/api/ai/chat', {
+  1628→        method: 'POST',
+  1629→        headers: { 'Content-Type': 'application/json' },
+  1630→        body: JSON.stringify(body),
+  1631→      })
+  1632→
+  1633→      if (res.ok) {
+  1634→        const data = await res.json()
+  1635→        setChatHistory(prev => [...prev, { role: 'assistant', content: data.text, provider: data.providerName }])
+  1636→      } else {
+  1637→        const data = await res.json()
+  1638→        setChatHistory(prev => [...prev, { role: 'assistant', content: `❌ Erreur: ${data.error || 'Réponse invalide'}` }])
+  1639→      }
+  1640→    } catch {
+  1641→      setChatHistory(prev => [...prev, { role: 'assistant', content: '❌ Erreur de connexion au serveur' }])
+  1642→    } finally {
+  1643→      setSending(false)
+  1644→    }
+  1645→  }
+  1646→
+  1647→  const applyTemplate = (templatePrompt: string) => {
+  1648→    const hotel = hotels.find(h => h.id === selectedHotelId)
+  1649→    let finalPrompt = templatePrompt
+  1650→    if (hotel) {
+  1651→      finalPrompt += `\n\nHôtel: ${hotel.name}\nVille: ${hotel.city}, ${hotel.region}\nSite web: ${hotel.web || 'Aucun'}\nTéléphone: ${hotel.phone || 'Non renseigné'}\nEmail: ${hotel.email || 'Non renseigné'}\nStatut digital: ${DIGITAL_STATUS_LABELS[hotel.statusDigital]}\nScore: ${hotel.score}/100`
+  1652→    }
+  1653→    setPrompt(finalPrompt)
+  1654→  }
+  1655→
+  1656→  return (
+  1657→    <div className="space-y-4">
+  1658→      {/* Provider Pills */}
+  1659→      <Card>
+  1660→        <CardContent className="pt-4 pb-4">
+  1661→          <div className="flex items-center gap-2 flex-wrap">
+  1662→            <span className="text-xs text-muted-foreground">Fournisseurs IA:</span>
+  1663→            {loadingProviders ? (
+  1664→              <Skeleton className="h-6 w-24" />
+  1665→            ) : providers.length === 0 ? (
+  1666→              <span className="text-xs text-muted-foreground">Aucun configuré</span>
+  1667→            ) : (
+  1668→              providers.map((p) => (
+  1669→                <Badge
+  1670→                  key={p.id}
+  1671→                  variant={p.configured ? 'default' : 'outline'}
+  1672→                  className={`text-xs cursor-pointer ${p.configured ? 'bg-guinea-green' : 'opacity-50'}`}
+  1673→                  onClick={() => p.configured && setSelectedProvider(selectedProvider === p.id ? '' : p.id)}
+  1674→                >
+  1675→                  {p.name}
+  1676→                  {p.free && <span className="ml-1 text-[9px] opacity-80">gratuit</span>}
+  1677→                  {p.configured && <Check className="h-3 w-3 ml-1" />}
+  1678→                </Badge>
+  1679→              ))
+  1680→            )}
+  1681→          </div>
+  1682→        </CardContent>
+  1683→      </Card>
+  1684→
+  1685→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  1686→        {/* Left Panel: Selection */}
+  1687→        <div className="space-y-4">
+  1688→          <Card>
+  1689→            <CardHeader className="pb-2">
+  1690→              <CardTitle className="text-sm flex items-center gap-2">
+  1691→                <Building2 className="h-4 w-4 text-guinea-green" />
+  1692→                Sélection hôtel
+  1693→              </CardTitle>
+  1694→            </CardHeader>
+  1695→            <CardContent>
+  1696→              <Select value={selectedHotelId} onValueChange={setSelectedHotelId}>
+  1697→                <SelectTrigger><SelectValue placeholder="Choisir un hôtel..." /></SelectTrigger>
+  1698→                <SelectContent className="max-h-64">
+  1699→                  {hotels.map((h) => (
+  1700→                    <SelectItem key={h.id} value={h.id}>{h.name} — {h.city}</SelectItem>
+  1701→                  ))}
+  1702→                </SelectContent>
+  1703→              </Select>
+  1704→              {selectedHotelId && (() => {
+  1705→                const h = hotels.find(h => h.id === selectedHotelId)
+  1706→                if (!h) return null
+  1707→                return (
+  1708→                  <div className="mt-3 p-3 bg-muted/50 rounded-lg text-xs space-y-1">
+  1709→                    <p className="font-medium">{h.name}</p>
+  1710→                    <p className="text-muted-foreground">{h.city}, {h.region}</p>
+  1711→                    <p>Statut: <Badge variant="outline" className={`text-[9px] ${DIGITAL_STATUS_COLORS[h.statusDigital]}`}>{DIGITAL_STATUS_LABELS[h.statusDigital]}</Badge></p>
+  1712→                    <p>Score: <span className={getScoreColor(h.score)}>{h.score}/100</span></p>
+  1713→                  </div>
+  1714→                )
+  1715→              })()}
+  1716→            </CardContent>
+  1717→          </Card>
+  1718→
+  1719→          <Card>
+  1720→            <CardHeader className="pb-2">
+  1721→              <CardTitle className="text-sm flex items-center gap-2">
+  1722→                <Sparkles className="h-4 w-4 text-guinea-gold" />
+  1723→                Modèles de prompt
+  1724→              </CardTitle>
+  1725→            </CardHeader>
+  1726→            <CardContent className="space-y-2">
+  1727→              {AI_PROMPT_TEMPLATES.map((tmpl) => {
+  1728→                const Icon = tmpl.icon
+  1729→                return (
+  1730→                  <button
+  1731→                    key={tmpl.id}
+  1732→                    className="w-full text-left p-2 rounded-lg border hover:bg-muted/50 transition-colors"
+  1733→                    onClick={() => applyTemplate(tmpl.prompt)}
+  1734→                  >
+  1735→                    <div className="flex items-center gap-2 text-xs font-medium">
+  1736→                      <Icon className="h-3.5 w-3.5 text-guinea-green" />
+  1737→                      {tmpl.label}
+  1738→                    </div>
+  1739→                  </button>
+  1740→                )
+  1741→              })}
+  1742→            </CardContent>
+  1743→          </Card>
+  1744→        </div>
+  1745→
+  1746→        {/* Right Panel: Chat */}
+  1747→        <Card className="lg:col-span-2 flex flex-col">
+  1748→          <CardHeader className="pb-2">
+  1749→            <CardTitle className="text-sm flex items-center gap-2">
+  1750→              <Bot className="h-4 w-4 text-guinea-green" />
+  1751→              Chat IA
+  1752→              {selectedProvider && (
+  1753→                <Badge variant="outline" className="text-[10px] ml-2">
+  1754→                  {providers.find(p => p.id === selectedProvider)?.name || selectedProvider}
+  1755→                </Badge>
+  1756→              )}
+  1757→            </CardTitle>
+  1758→          </CardHeader>
+  1759→          <CardContent className="flex-1 flex flex-col min-h-[400px]">
+  1760→            {/* Chat messages */}
+  1761→            <ScrollArea className="flex-1 mb-3">
+  1762→              <div className="space-y-3 pr-4">
+  1763→                {chatHistory.length === 0 && (
+  1764→                  <div className="text-center py-8 text-muted-foreground">
+  1765→                    <Bot className="h-10 w-10 mx-auto mb-2 opacity-30" />
+  1766→                    <p className="text-sm">Sélectionnez un hôtel et posez une question</p>
+  1767→                    <p className="text-xs mt-1">ou utilisez un modèle de prompt</p>
+  1768→                  </div>
+  1769→                )}
+  1770→                {chatHistory.map((msg, i) => (
+  1771→                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+  1772→                    <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+  1773→                      msg.role === 'user'
+  1774→                        ? 'bg-guinea-green text-white'
+  1775→                        : 'bg-muted'
+  1776→                    }`}>
+  1777→                      {msg.role === 'assistant' && msg.provider && (
+  1778→                        <div className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
+  1779→                          <Bot className="h-3 w-3" /> {msg.provider}
+  1780→                        </div>
+  1781→                      )}
+  1782→                      <div className="whitespace-pre-wrap text-xs leading-relaxed">{msg.content}</div>
+  1783→                    </div>
+  1784→                  </div>
+  1785→                ))}
+  1786→                {sending && (
+  1787→                  <div className="flex justify-start">
+  1788→                    <div className="bg-muted rounded-lg px-3 py-2">
+  1789→                      <Loader2 className="h-4 w-4 animate-spin text-guinea-green" />
+  1790→                    </div>
+  1791→                  </div>
+  1792→                )}
+  1793→                <div ref={chatEndRef} />
+  1794→              </div>
+  1795→            </ScrollArea>
+  1796→
+  1797→            {/* Input */}
+  1798→            <div className="flex gap-2">
+  1799→              <Textarea
+  1800→                placeholder="Posez votre question ou utilisez un modèle..."
+  1801→                className="resize-none min-h-[60px] max-h-[120px]"
+  1802→                value={prompt}
+  1803→                onChange={(e) => setPrompt(e.target.value)}
+  1804→                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+  1805→                disabled={sending}
+  1806→              />
+  1807→              <Button className="bg-guinea-green hover:bg-guinea-green-light self-end" onClick={handleSend} disabled={sending || !prompt.trim()}>
+  1808→                <Send className="h-4 w-4" />
+  1809→              </Button>
+  1810→            </div>
+  1811→          </CardContent>
+  1812→        </Card>
+  1813→      </div>
+  1814→    </div>
+  1815→  )
+  1816→}
+  1817→
+  1818→// ============================================================================
+  1819→// SETTINGS PAGE
+  1820→// ============================================================================
+  1821→
+  1822→function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) {
+  1823→  const [providers, setProviders] = useState<AIProvider[]>([])
+  1824→  const [loading, setLoading] = useState(true)
+  1825→  const [apiKeys, setApiKeys] = useState<Record<string, string>>({})
+  1826→  const [saving, setSaving] = useState<string | null>(null)
+  1827→  const [stats, setStats] = useState<Stats | null>(null)
+  1828→
+  1829→  const fetchProviders = useCallback(async () => {
+  1830→    setLoading(true)
+  1831→    try {
+  1832→      const res = await fetch('/api/ai/providers')
+  1833→      if (res.ok) {
+  1834→        const data = await res.json()
+  1835→        setProviders(data.providers)
+  1836→      }
+  1837→    } catch {
+  1838→      /* ignore */
+  1839→    } finally {
+  1840→      setLoading(false)
+  1841→    }
+  1842→  }, [])
+  1843→
+  1844→  const fetchStats = useCallback(async () => {
+  1845→    try {
+  1846→      const res = await fetch('/api/stats')
+  1847→      if (res.ok) setStats(await res.json())
+  1848→    } catch {
+  1849→      /* ignore */
+  1850→    }
+  1851→  }, [])
+  1852→
+  1853→  useEffect(() => { fetchProviders(); fetchStats() }, [fetchProviders, fetchStats])
+  1854→
+  1855→  const handleSaveKey = async (providerId: string) => {
+  1856→    const key = apiKeys[providerId]
+  1857→    if (!key?.trim()) return
+  1858→    setSaving(providerId)
+  1859→    try {
+  1860→      const res = await fetch('/api/ai/providers', {
+  1861→        method: 'POST',
+  1862→        headers: { 'Content-Type': 'application/json' },
+  1863→        body: JSON.stringify({ providerId, apiKey: key }),
+  1864→      })
+  1865→      if (res.ok) {
+  1866→        toast({ title: 'Clé sauvegardée', description: `Clé API ${providerId} configurée avec succès` })
+  1867→        setApiKeys(prev => ({ ...prev, [providerId]: '' }))
+  1868→        fetchProviders()
+  1869→      } else {
+  1870→        const data = await res.json()
+  1871→        toast({ title: 'Erreur', description: data.error || 'Impossible de sauvegarder', variant: 'destructive' })
+  1872→      }
+  1873→    } catch {
+  1874→      toast({ title: 'Erreur', description: 'Connexion impossible', variant: 'destructive' })
+  1875→    } finally {
+  1876→      setSaving(null)
+  1877→    }
+  1878→  }
+  1879→
+  1880→  const handleDeleteKey = async (providerId: string) => {
+  1881→    try {
+  1882→      const res = await fetch(`/api/ai/providers/${providerId}`, { method: 'DELETE' })
+  1883→      if (res.ok) {
+  1884→        toast({ title: 'Clé supprimée', description: `Clé API ${providerId} retirée` })
+  1885→        fetchProviders()
+  1886→      }
+  1887→    } catch {
+  1888→      toast({ title: 'Erreur', description: 'Impossible de supprimer', variant: 'destructive' })
+  1889→    }
+  1890→  }
+  1891→
+  1892→  return (
+  1893→    <div className="space-y-6">
+  1894→      <Tabs defaultValue="ai">
+  1895→        <TabsList>
+  1896→          <TabsTrigger value="ai"><Brain className="h-4 w-4 mr-1" /> Fournisseurs IA</TabsTrigger>
+  1897→          <TabsTrigger value="agency"><Building2 className="h-4 w-4 mr-1" /> Agence</TabsTrigger>
+  1898→          <TabsTrigger value="database"><Settings className="h-4 w-4 mr-1" /> Base de données</TabsTrigger>
+  1899→        </TabsList>
+  1900→
+  1901→        {/* AI Providers Tab */}
+  1902→        <TabsContent value="ai" className="space-y-4">
+  1903→          <div className="flex items-center justify-between">
+  1904→            <div>
+  1905→              <h3 className="text-sm font-semibold">Fournisseurs d&apos;IA</h3>
+  1906→              <p className="text-xs text-muted-foreground">Configurez vos clés API pour activer l&apos;analyse IA. {providers.filter(p => p.configured).length}/{providers.length} configurés</p>
+  1907→            </div>
+  1908→          </div>
+  1909→
+  1910→          {loading ? (
+  1911→            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  1912→              {Array.from({ length: 7 }).map((_, i) => <CardSkeleton key={i} />)}
+  1913→            </div>
+  1914→          ) : (
+  1915→            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  1916→              {providers.map((provider) => (
+  1917→                <Card key={provider.id} className={provider.configured ? 'border-guinea-green/30' : ''}>
+  1918→                  <CardContent className="pt-4">
+  1919→                    <div className="flex items-center justify-between mb-3">
+  1920→                      <div className="flex items-center gap-2">
+  1921→                        <h4 className="text-sm font-semibold">{provider.name}</h4>
+  1922→                        {provider.free && <Badge variant="outline" className="text-[9px] bg-emerald-50 text-emerald-600">Gratuit</Badge>}
+  1923→                      </div>
+  1924→                      {provider.configured ? (
+  1925→                        <Badge className="bg-guinea-green text-[10px]">
+  1926→                          <Check className="h-3 w-3 mr-1" /> Configuré
+  1927→                        </Badge>
+  1928→                      ) : (
+  1929→                        <Badge variant="outline" className="text-[10px] text-muted-foreground">Non configuré</Badge>
+  1930→                      )}
+  1931→                    </div>
+  1932→                    <p className="text-xs text-muted-foreground mb-1">Modèle: {provider.defaultModel}</p>
+  1933→                    {provider.keyPrefix && <p className="text-xs text-muted-foreground mb-2">Préfixe clé: <code className="bg-muted px-1 rounded">{provider.keyPrefix}</code></p>}
+  1934→                    {provider.configured && provider.keyHint && (
+  1935→                      <p className="text-xs text-muted-foreground mb-2">Clé: <code className="bg-muted px-1 rounded">{provider.keyHint}</code></p>
+  1936→                    )}
+  1937→                    <div className="flex gap-2 mt-3">
+  1938→                      <Input
+  1939→                        type="password"
+  1940→                        placeholder={provider.configured ? 'Nouvelle clé API...' : 'Clé API...'}
+  1941→                        className="text-xs"
+  1942→                        value={apiKeys[provider.id] || ''}
+  1943→                        onChange={(e) => setApiKeys(prev => ({ ...prev, [provider.id]: e.target.value }))}
+  1944→                        onKeyDown={(e) => e.key === 'Enter' && handleSaveKey(provider.id)}
+  1945→                      />
+  1946→                      <Button size="sm" onClick={() => handleSaveKey(provider.id)} disabled={saving === provider.id || !apiKeys[provider.id]?.trim()}>
+  1947→                        {saving === provider.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+  1948→                      </Button>
+  1949→                      {provider.configured && (
+  1950→                        <Button variant="outline" size="sm" onClick={() => handleDeleteKey(provider.id)} className="text-destructive">
+  1951→                          <Trash2 className="h-3 w-3" />
+  1952→                        </Button>
+  1953→                      )}
+  1954→                    </div>
+  1955→                  </CardContent>
+  1956→                </Card>
+  1957→              ))}
+  1958→            </div>
+  1959→          )}
+  1960→        </TabsContent>
+  1961→
+  1962→        {/* Agency Tab */}
+  1963→        <TabsContent value="agency" className="space-y-4">
+  1964→          <Card>
+  1965→            <CardHeader>
+  1966→              <CardTitle className="text-sm">Informations de l&apos;agence</CardTitle>
+  1967→              <CardDescription className="text-xs">Ces informations seront utilisées dans les communications de prospection</CardDescription>
+  1968→            </CardHeader>
+  1969→            <CardContent className="space-y-4">
+  1970→              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  1971→                <div>
+  1972→                  <Label className="text-xs">Nom de l&apos;agence</Label>
+  1973→                  <Input placeholder="HotelScout Guinea" className="mt-1" />
+  1974→                </div>
+  1975→                <div>
+  1976→                  <Label className="text-xs">Email de contact</Label>
+  1977→                  <Input placeholder="contact@hotelscout-gn.com" className="mt-1" />
+  1978→                </div>
+  1979→                <div>
+  1980→                  <Label className="text-xs">Téléphone</Label>
+  1981→                  <Input placeholder="+224 XXX XXX XXX" className="mt-1" />
+  1982→                </div>
+  1983→                <div>
+  1984→                  <Label className="text-xs">Site web</Label>
+  1985→                  <Input placeholder="https://hotelscout-gn.com" className="mt-1" />
+  1986→                </div>
+  1987→              </div>
+  1988→              <Button className="bg-guinea-green hover:bg-guinea-green-light">Sauvegarder</Button>
+  1989→            </CardContent>
+  1990→          </Card>
+  1991→        </TabsContent>
+  1992→
+  1993→        {/* Database Tab */}
+  1994→        <TabsContent value="database" className="space-y-4">
+  1995→          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  1996→            <Card>
+  1997→              <CardHeader>
+  1998→                <CardTitle className="text-sm">Statistiques de la base</CardTitle>
+  1999→              </CardHeader>
+  2000→              <CardContent>
+  2001→                {stats ? (
+  2002→                  <div className="space-y-2 text-sm">
+  2003→                    <div className="flex justify-between"><span className="text-muted-foreground">Total hôtels</span><span className="font-semibold">{formatNumber(stats.totalHotels)}</span></div>
+  2004→                    <div className="flex justify-between"><span className="text-muted-foreground">Avec site web</span><span className="font-semibold">{formatNumber(stats.hotelsWithWebsite)}</span></div>
+  2005→                    <div className="flex justify-between"><span className="text-muted-foreground">Avec téléphone</span><span className="font-semibold">{formatNumber(stats.hotelsWithPhone)}</span></div>
+  2006→                    <div className="flex justify-between"><span className="text-muted-foreground">Avec email</span><span className="font-semibold">{formatNumber(stats.hotelsWithEmail)}</span></div>
+  2007→                    <Separator />
+  2008→                    <div className="flex justify-between"><span className="text-muted-foreground">Total contacts</span><span className="font-semibold">{formatNumber(stats.totalContacts)}</span></div>
+  2009→                    <div className="flex justify-between"><span className="text-muted-foreground">Contacts (7 jours)</span><span className="font-semibold">{formatNumber(stats.recentContactsCount)}</span></div>
+  2010→                    <div className="flex justify-between"><span className="text-muted-foreground">Prêt digital</span><span className="font-semibold">{stats.digitalReadiness}%</span></div>
+  2011→                  </div>
+  2012→                ) : (
+  2013→                  <TableSkeleton rows={7} />
+  2014→                )}
+  2015→              </CardContent>
+  2016→            </Card>
+  2017→
+  2018→            <Card>
+  2019→              <CardHeader>
+  2020→                <CardTitle className="text-sm">Actions de maintenance</CardTitle>
+  2021→              </CardHeader>
+  2022→              <CardContent className="space-y-3">
+  2023→                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { fetch('/api/hotels/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verifyAll: true }) }); toast({ title: 'Vérification lancée' }) }}>
+  2024→                  <RefreshCw className="h-3.5 w-3.5 mr-2" /> Vérifier toutes les URLs
+  2025→                </Button>
+  2026→                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { fetch('/api/hotels/enrich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enrichAllMissing: true }) }); toast({ title: 'Enrichissement lancé' }) }}>
+  2027→                  <Sparkles className="h-3.5 w-3.5 mr-2" /> Enrichir les données manquantes
+  2028→                </Button>
+  2029→                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { fetch('/api/cron/collect', { method: 'POST' }); toast({ title: 'Collecte lancée' }) }}>
+  2030→                  <Search className="h-3.5 w-3.5 mr-2" /> Lancer la collecte automatique
+  2031→                </Button>
+  2032→                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { window.open('/api/export', '_blank'); toast({ title: 'Export lancé' }) }}>
+  2033→                  <Download className="h-3.5 w-3.5 mr-2" /> Exporter la base en CSV
+  2034→                </Button>
+  2035→              </CardContent>
+  2036→            </Card>
+  2037→          </div>
+  2038→        </TabsContent>
+  2039→      </Tabs>
+  2040→    </div>
+  2041→  )
+  2042→}
+  2043→
+  2044→// ============================================================================
+  2045→// MAIN PAGE COMPONENT
+  2046→// ============================================================================
+  2047→
+  2048→export default function Home() {
+  2049→  const [activePage, setActivePage] = useState<PageType>('dashboard')
+  2050→  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  2051→  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  2052→  const [stats, setStats] = useState<Stats | null>(null)
+  2053→  const [statsLoading, setStatsLoading] = useState(true)
+  2054→  const { toast } = useToast()
+  2055→
+  2056→  // Fetch dashboard stats
+  2057→  const fetchStats = useCallback(async () => {
+  2058→    setStatsLoading(true)
+  2059→    try {
+  2060→      const res = await fetch('/api/stats')
+  2061→      if (res.ok) {
+  2062→        setStats(await res.json())
+  2063→      }
+  2064→    } catch {
+  2065→      /* ignore */
+  2066→    } finally {
+  2067→      setStatsLoading(false)
+  2068→    }
+  2069→  }, [])
+  2070→
+  2071→  useEffect(() => { fetchStats() }, [fetchStats])
+  2072→
+  2073→  // Auto-collapse sidebar on mobile
+  2074→  useEffect(() => {
+  2075→    const handleResize = () => {
+  2076→      if (window.innerWidth < 768) {
+  2077→        setSidebarCollapsed(true)
+  2078→      }
+  2079→    }
+  2080→    handleResize()
+  2081→    window.addEventListener('resize', handleResize)
+  2082→    return () => window.removeEventListener('resize', handleResize)
+  2083→  }, [])
+  2084→
+  2085→  const handlePageChange = (page: PageType) => {
+  2086→    setActivePage(page)
+  2087→    setMobileMenuOpen(false)
+  2088→    if (page === 'dashboard') fetchStats()
+  2089→  }
+  2090→
+  2091→  const renderPage = () => {
+  2092→    switch (activePage) {
+  2093→      case 'dashboard':
+  2094→        return <DashboardPage stats={stats} loading={statsLoading} onNavigate={handlePageChange} />
+  2095→      case 'hotels':
+  2096→        return <HotelsPage toast={toast} />
+  2097→      case 'collecte':
+  2098→        return <CollectePage toast={toast} />
+  2099→      case 'prospects':
+  2100→        return <ProspectsPage toast={toast} />
+  2101→      case 'pipeline':
+  2102→        return <PipelinePage toast={toast} />
+  2103→      case 'ia':
+  2104→        return <AnalyseIAPage toast={toast} />
+  2105→      case 'settings':
+  2106→        return <SettingsPage toast={toast} />
+  2107→      default:
+  2108→        return null
+  2109→    }
+  2110→  }
+  2111→
+  2112→  return (
+  2113→    <div className="flex h-screen overflow-hidden">
+  2114→      {/* Desktop Sidebar */}
+  2115→      <div className="hidden md:flex">
+  2116→        <Sidebar
+  2117→          activePage={activePage}
+  2118→          onPageChange={handlePageChange}
+  2119→          collapsed={sidebarCollapsed}
+  2120→          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+  2121→        />
+  2122→      </div>
+  2123→
+  2124→      {/* Mobile Sidebar */}
+  2125→      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+  2126→        <SheetContent side="left" className="p-0 w-60 bg-sidebar text-sidebar-foreground border-sidebar-border">
+  2127→          <SheetHeader className="sr-only">
+  2128→            <SheetTitle>Navigation</SheetTitle>
+  2129→          </SheetHeader>
+  2130→          <Sidebar
+  2131→            activePage={activePage}
+  2132→            onPageChange={handlePageChange}
+  2133→            collapsed={false}
+  2134→            onToggle={() => setMobileMenuOpen(false)}
+  2135→          />
+  2136→        </SheetContent>
+  2137→      </Sheet>
+  2138→
+  2139→      {/* Main Content */}
+  2140→      <main className="flex-1 flex flex-col overflow-hidden">
+  2141→        {/* Top Bar */}
+  2142→        <header className="h-14 border-b flex items-center gap-3 px-4 bg-card shrink-0">
+  2143→          {/* Mobile Menu Button */}
+  2144→          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+  2145→            <SheetTrigger asChild>
+  2146→              <Button variant="ghost" size="icon" className="md:hidden">
+  2147→                <Menu className="h-5 w-5" />
+  2148→              </Button>
+  2149→            </SheetTrigger>
+  2150→          </Sheet>
+  2151→
+  2152→          {/* Page Title */}
+  2153→          <div className="flex items-center gap-2">
+  2154→            {React.createElement(PAGE_ICONS[activePage], { className: 'h-5 w-5 text-guinea-green' })}
+  2155→            <h1 className="font-semibold text-sm md:text-base">{PAGE_LABELS[activePage]}</h1>
+  2156→          </div>
+  2157→
+  2158→          <div className="flex-1" />
+  2159→
+  2160→          {/* Right side actions */}
+  2161→          <div className="flex items-center gap-2">
+  2162→            <TooltipProvider>
+  2163→              <Tooltip>
+  2164→                <TooltipTrigger asChild>
+  2165→                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={fetchStats}>
+  2166→                    <RefreshCw className="h-4 w-4" />
+  2167→                  </Button>
+  2168→                </TooltipTrigger>
+  2169→                <TooltipContent>Actualiser les données</TooltipContent>
+  2170→              </Tooltip>
+  2171→            </TooltipProvider>
+  2172→            <div className="hidden sm:flex items-center gap-1">
+  2173→              <div className="h-1.5 w-1.5 rounded-full bg-guinea-red" />
+  2174→              <div className="h-1.5 w-1.5 rounded-full bg-guinea-gold" />
+  2175→              <div className="h-1.5 w-1.5 rounded-full bg-guinea-green" />
+  2176→            </div>
+  2177→          </div>
+  2178→        </header>
+  2179→
+  2180→        {/* Page Content */}
+  2181→        <div className="flex-1 overflow-y-auto custom-scrollbar">
+  2182→          <div className="p-4 md:p-6 max-w-7xl mx-auto">
+  2183→            {renderPage()}
+  2184→          </div>
+  2185→        </div>
+  2186→
+  2187→        {/* Footer */}
+  2188→        <footer className="h-8 border-t flex items-center justify-center px-4 bg-card shrink-0">
+  2189→          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+  2190→            <span>HotelScout Guinea v7</span>
+  2191→            <span>•</span>
+  2192→            <span>Prospection Hôtelière Intelligente</span>
+  2193→            <div className="flex gap-0.5 ml-2">
+  2194→              <div className="h-1 w-3 rounded-full bg-guinea-red" />
+  2195→              <div className="h-1 w-3 rounded-full bg-guinea-gold" />
+  2196→              <div className="h-1 w-3 rounded-full bg-guinea-green" />
+  2197→            </div>
+  2198→          </div>
+  2199→        </footer>
+  2200→      </main>
+  2201→    </div>
+  2202→  )
+  2203→}
+  2204→

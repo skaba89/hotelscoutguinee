@@ -26,7 +26,8 @@ import {
   XCircle, Clock, AlertTriangle, Zap, MessageSquare, Send, Bot,
   ArrowRight, ArrowUpRight, TrendingUp, Users, Eye, Link2, Wifi,
   WifiOff, Filter, SortAsc, SortDesc, Play, Loader2, X, Check,
-  Copy, Sparkles, ChevronDown, Info
+  Copy, Sparkles, ChevronDown, Info, Calendar, ShoppingCart, Bed,
+  User, CreditCard, ClipboardList, AlertCircle
 } from 'lucide-react'
 
 // ============================================================================
@@ -140,6 +141,10 @@ interface Stats {
   hotelsWithWebsite: number
   hotelsWithPhone: number
   hotelsWithEmail: number
+  hotelsWithBooking: number
+  hotelsWithTripadvisor: number
+  totalReservations: number
+  pendingReservations: number
   lastUpdated: string
 }
 
@@ -150,13 +155,47 @@ interface PipelineStage {
   hotels: Hotel[]
 }
 
-type PageType = 'dashboard' | 'hotels' | 'collecte' | 'prospects' | 'pipeline' | 'ia' | 'settings'
+interface Reservation {
+  id: string
+  hotelId: string
+  checkIn: string
+  checkOut: string
+  guests: number
+  roomType: string
+  specialRequests: string | null
+  guestName: string
+  guestEmail: string | null
+  guestPhone: string | null
+  status: string
+  confirmationCode: string | null
+  nights: number
+  totalPrice: number
+  createdAt: string
+  updatedAt: string
+  hotel?: { id: string; name: string; city: string; region: string; stars: number; phone: string | null; email: string | null }
+  planningSteps?: PlanningStep[]
+}
+
+interface PlanningStep {
+  id: string
+  reservationId: string
+  step: string
+  label: string
+  status: string
+  scheduledAt: string | null
+  completedAt: string | null
+  notes: string | null
+  order: number
+}
+
+type PageType = 'menu' | 'dashboard' | 'hotels' | 'collecte' | 'prospects' | 'pipeline' | 'ia' | 'settings'
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
 const PAGE_LABELS: Record<PageType, string> = {
+  menu: 'Menu & Réservation',
   dashboard: 'Tableau de bord',
   hotels: 'Base Hôtels',
   collecte: 'Agent de Collecte',
@@ -167,6 +206,7 @@ const PAGE_LABELS: Record<PageType, string> = {
 }
 
 const PAGE_ICONS: Record<PageType, React.ElementType> = {
+  menu: ShoppingCart,
   dashboard: LayoutDashboard,
   hotels: Building2,
   collecte: Search,
@@ -215,6 +255,37 @@ const AI_PROMPT_TEMPLATES = [
   { id: 'prospect', label: 'Message de prospection', icon: Send, prompt: 'Rédige un message de prospection professionnel et personnalisé pour cet hôtel en Guinée, en proposant nos services de création de site web et de présence digitale. Le ton doit être chaleureux mais professionnel.' },
   { id: 'audit', label: 'Audit concurrentiel', icon: Eye, prompt: 'Réalise un audit concurrentiel pour cet hôtel en Guinée. Compare sa présence digitale avec les standards de l\'industrie hôtelière en Afrique de l\'Ouest et identifie les opportunités d\'amélioration.' },
 ]
+
+const ROOM_TYPE_LABELS: Record<string, string> = {
+  standard: 'Standard',
+  superior: 'Supérieure',
+  deluxe: 'Deluxe',
+  suite: 'Suite',
+}
+
+const RESERVATION_STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-amber-100 text-amber-700',
+  confirmed: 'bg-blue-100 text-blue-700',
+  cancelled: 'bg-red-100 text-red-700',
+  completed: 'bg-emerald-100 text-emerald-700',
+}
+
+const RESERVATION_STATUS_LABELS: Record<string, string> = {
+  pending: 'En attente',
+  confirmed: 'Confirmée',
+  cancelled: 'Annulée',
+  completed: 'Terminée',
+}
+
+const PLANNING_STEP_ICONS: Record<string, React.ElementType> = {
+  reservation: ShoppingCart,
+  confirmation: CheckCircle2,
+  payment: CreditCard,
+  checkin_reminder: AlertCircle,
+  checkin: Bed,
+  checkout: Clock,
+  feedback: MessageSquare,
+}
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -295,7 +366,7 @@ function Sidebar({
   collapsed: boolean
   onToggle: () => void
 }) {
-  const pages: PageType[] = ['dashboard', 'hotels', 'collecte', 'prospects', 'pipeline', 'ia', 'settings']
+  const pages: PageType[] = ['menu', 'dashboard', 'hotels', 'collecte', 'prospects', 'pipeline', 'ia', 'settings']
 
   return (
     <aside
@@ -368,6 +439,553 @@ function Sidebar({
         </div>
       )}
     </aside>
+  )
+}
+
+// ============================================================================
+// MENU & RESERVATION PAGE (Homepage)
+// ============================================================================
+
+function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof useToast>['toast']; onNavigate: (p: PageType) => void }) {
+  const [hotels, setHotels] = useState<Hotel[]>([])
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [selectedRegion, setSelectedRegion] = useState('all')
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null)
+  const [showReservation, setShowReservation] = useState(false)
+  const [reservationForm, setReservationForm] = useState({
+    guestName: '', guestEmail: '', guestPhone: '',
+    checkIn: '', checkOut: '', guests: 1, roomType: 'standard',
+    specialRequests: '',
+  })
+  const [creating, setCreating] = useState(false)
+  const [reservations, setReservations] = useState<Reservation[]>([])
+  const [showReservations, setShowReservations] = useState(false)
+  const [activeReservation, setActiveReservation] = useState<Reservation | null>(null)
+  const [showPlanning, setShowPlanning] = useState(false)
+  const [newStep, setNewStep] = useState({ step: '', label: '' })
+  const [showAddStep, setShowAddStep] = useState(false)
+  const [updatingStep, setUpdatingStep] = useState<string | null>(null)
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [hotelsRes, statsRes] = await Promise.all([
+        fetch('/api/hotels?limit=200&sortBy=score&sortOrder=desc'),
+        fetch('/api/stats'),
+      ])
+      if (hotelsRes.ok) {
+        const data = await hotelsRes.json()
+        setHotels(data.hotels)
+      }
+      if (statsRes.ok) {
+        setStats(await statsRes.json())
+      }
+    } catch {
+      toast({ title: 'Erreur', description: 'Impossible de charger les données', variant: 'destructive' })
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  const fetchReservations = useCallback(async () => {
+    try {
+      const res = await fetch('/api/reservations')
+      if (res.ok) {
+        const data = await res.json()
+        setReservations(data.reservations)
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  useEffect(() => { fetchReservations() }, [fetchReservations])
+
+  // Derived data
+  const regions = stats ? Object.keys(stats.byRegion).sort() : []
+  const categories = ['all', ...new Set(hotels.map(h => h.stars > 0 ? `${h.stars} étoiles` : 'Non classé'))].filter(Boolean)
+
+  const filteredHotels = hotels.filter(h => {
+    if (search && !h.name.toLowerCase().includes(search.toLowerCase()) && !h.city.toLowerCase().includes(search.toLowerCase())) return false
+    if (selectedRegion !== 'all' && h.region !== selectedRegion) return false
+    if (selectedCategory !== 'all') {
+      if (selectedCategory === 'Non classé' && h.stars > 0) return false
+      if (selectedCategory !== 'Non classé' && h.stars !== parseInt(selectedCategory)) return false
+    }
+    return true
+  })
+
+  const handleCreateReservation = async () => {
+    if (!selectedHotel || !reservationForm.guestName || !reservationForm.checkIn || !reservationForm.checkOut) {
+      toast({ title: 'Champs manquants', description: 'Remplissez le nom, les dates et sélectionnez un hôtel', variant: 'destructive' })
+      return
+    }
+    setCreating(true)
+    try {
+      const res = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hotelId: selectedHotel.id,
+          ...reservationForm,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        toast({ title: 'Réservation créée', description: `Confirmation: ${data.reservation.confirmationCode}` })
+        setShowReservation(false)
+        setActiveReservation(data.reservation)
+        setShowPlanning(true)
+        fetchReservations()
+        setReservationForm({ guestName: '', guestEmail: '', guestPhone: '', checkIn: '', checkOut: '', guests: 1, roomType: 'standard', specialRequests: '' })
+      } else {
+        const data = await res.json()
+        toast({ title: 'Erreur', description: data.error || 'Impossible de créer la réservation', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Erreur', description: 'Connexion impossible', variant: 'destructive' })
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const handleUpdateStep = async (stepId: string, status: string) => {
+    setUpdatingStep(stepId)
+    try {
+      const res = await fetch('/api/planning', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stepId, status }),
+      })
+      if (res.ok) {
+        toast({ title: 'Étape mise à jour', description: status === 'completed' ? 'Étape terminée' : status === 'skipped' ? 'Étape ignorée' : 'Étape en cours' })
+        // Refresh the active reservation
+        if (activeReservation) {
+          const res2 = await fetch(`/api/reservations/${activeReservation.id}`)
+          if (res2.ok) {
+            const data = await res2.json()
+            setActiveReservation(data.reservation)
+          }
+        }
+        fetchReservations()
+      }
+    } catch {
+      toast({ title: 'Erreur', description: 'Impossible de mettre à jour', variant: 'destructive' })
+    } finally {
+      setUpdatingStep(null)
+    }
+  }
+
+  const handleAddStep = async () => {
+    if (!activeReservation || !newStep.step || !newStep.label) return
+    try {
+      const res = await fetch('/api/planning', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reservationId: activeReservation.id, step: newStep.step, label: newStep.label }),
+      })
+      if (res.ok) {
+        toast({ title: 'Étape ajoutée', description: 'Nouvelle étape de planning ajoutée' })
+        setShowAddStep(false)
+        setNewStep({ step: '', label: '' })
+        // Refresh
+        const res2 = await fetch(`/api/reservations/${activeReservation.id}`)
+        if (res2.ok) {
+          const data = await res2.json()
+          setActiveReservation(data.reservation)
+        }
+      }
+    } catch {
+      toast({ title: 'Erreur', description: 'Impossible d\'ajouter l\'étape', variant: 'destructive' })
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Hero Section */}
+      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-guinea-green via-guinea-green-light to-guinea-green p-8 text-white">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-4 right-8 text-9xl font-bold opacity-20">GH</div>
+        </div>
+        <div className="relative z-10">
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">HotelScout Guinée</h1>
+          <p className="text-white/80 text-sm md:text-base mb-4">Trouvez et réservez le meilleur hôtel en Guinée — Planifiez votre séjour de bout en bout</p>
+          <div className="flex flex-wrap gap-3">
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 text-sm">
+              <span className="font-bold text-lg">{stats?.totalHotels ?? 0}</span> hôtels
+            </div>
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 text-sm">
+              <span className="font-bold text-lg">{regions.length}</span> régions
+            </div>
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 text-sm">
+              <span className="font-bold text-lg">{reservations.length}</span> réservations
+            </div>
+            <Button
+              variant="secondary"
+              className="bg-guinea-gold hover:bg-guinea-gold-light text-black"
+              onClick={() => setShowReservations(true)}
+            >
+              <ClipboardList className="h-4 w-4 mr-2" />
+              Mes réservations
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Search & Filters */}
+      <Card>
+        <CardContent className="pt-4 pb-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher un hôtel ou une ville..."
+                className="pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+              <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Région" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes les régions</SelectItem>
+                {regions.map((r) => (
+                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Catégorie" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes</SelectItem>
+                {categories.filter(c => c !== 'all').map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center justify-between mt-3">
+            <span className="text-xs text-muted-foreground">{filteredHotels.length} hôtels trouvés</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Hotels Grid */}
+      {filteredHotels.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p>Aucun hôtel trouvé</p>
+            <p className="text-xs mt-1">Modifiez vos critères de recherche</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredHotels.map((hotel) => (
+            <Card key={hotel.id} className="transition-all hover:shadow-lg hover:-translate-y-0.5 group">
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-sm font-semibold group-hover:text-guinea-green transition-colors">{hotel.name}</CardTitle>
+                    <CardDescription className="text-xs flex items-center gap-1 mt-1">
+                      <MapPin className="h-3 w-3" /> {hotel.city}, {hotel.region}
+                    </CardDescription>
+                  </div>
+                  {hotel.stars > 0 && (
+                    <div className="flex">
+                      {Array.from({ length: Math.min(hotel.stars, 5) }).map((_, i) => (
+                        <Star key={i} className="h-3 w-3 fill-guinea-gold text-guinea-gold" />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  <Badge variant="outline" className={`text-[10px] ${DIGITAL_STATUS_COLORS[hotel.statusDigital]}`}>
+                    {DIGITAL_STATUS_LABELS[hotel.statusDigital]}
+                  </Badge>
+                  {hotel.hasBooking && <Badge className="text-[9px] h-5 bg-blue-600">Booking</Badge>}
+                  {hotel.hasTripadvisor && <Badge className="text-[9px] h-5 bg-emerald-600">TA</Badge>}
+                  <Badge variant="outline" className={`text-[10px] ${PRIORITY_COLORS[hotel.priority]}`}>
+                    {hotel.priority.toUpperCase()}
+                  </Badge>
+                </div>
+                {hotel.rooms > 0 && (
+                  <p className="text-xs text-muted-foreground mb-1"><Bed className="h-3 w-3 inline mr-1" />{hotel.rooms} chambres</p>
+                )}
+                {hotel.priceUsd && (
+                  <p className="text-xs text-muted-foreground mb-2">A partir de <span className="font-semibold text-guinea-green">{hotel.priceUsd}</span></p>
+                )}
+                <div className="flex gap-2 mt-2">
+                  {hotel.phone && (
+                    <a href={`tel:${hotel.phone}`} className="text-xs flex items-center gap-1 text-guinea-green hover:underline">
+                      <Phone className="h-3 w-3" /> Appeler
+                    </a>
+                  )}
+                  {hotel.email && (
+                    <a href={`mailto:${hotel.email}`} className="text-xs flex items-center gap-1 text-guinea-green hover:underline">
+                      <Mail className="h-3 w-3" /> Email
+                    </a>
+                  )}
+                </div>
+                <Button
+                  className="w-full mt-3 bg-guinea-green hover:bg-guinea-green-light text-sm h-9"
+                  onClick={() => { setSelectedHotel(hotel); setShowReservation(true) }}
+                >
+                  <Calendar className="h-4 w-4 mr-2" /> Réserver
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Reservation Dialog */}
+      <Dialog open={showReservation} onOpenChange={setShowReservation}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-guinea-green" />
+              Réserver — {selectedHotel?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedHotel?.city}, {selectedHotel?.region}
+              {selectedHotel?.stars ? ` — ${selectedHotel.stars} étoiles` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label className="text-xs">Nom complet *</Label><Input className="mt-1" value={reservationForm.guestName} onChange={(e) => setReservationForm(p => ({ ...p, guestName: e.target.value }))} placeholder="Votre nom" /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Email</Label><Input type="email" className="mt-1" value={reservationForm.guestEmail} onChange={(e) => setReservationForm(p => ({ ...p, guestEmail: e.target.value }))} placeholder="email@exemple.com" /></div>
+              <div><Label className="text-xs">Téléphone</Label><Input className="mt-1" value={reservationForm.guestPhone} onChange={(e) => setReservationForm(p => ({ ...p, guestPhone: e.target.value }))} placeholder="+224 XXX XXX XXX" /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Date d&apos;arrivée *</Label><Input type="date" className="mt-1" value={reservationForm.checkIn} onChange={(e) => setReservationForm(p => ({ ...p, checkIn: e.target.value }))} /></div>
+              <div><Label className="text-xs">Date de départ *</Label><Input type="date" className="mt-1" value={reservationForm.checkOut} onChange={(e) => setReservationForm(p => ({ ...p, checkOut: e.target.value }))} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Nombre de personnes</Label>
+                <Input type="number" min={1} max={10} className="mt-1" value={reservationForm.guests} onChange={(e) => setReservationForm(p => ({ ...p, guests: parseInt(e.target.value) || 1 }))} />
+              </div>
+              <div>
+                <Label className="text-xs">Type de chambre</Label>
+                <Select value={reservationForm.roomType} onValueChange={(v) => setReservationForm(p => ({ ...p, roomType: v }))}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(ROOM_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div><Label className="text-xs">Demandes spéciales</Label><Textarea className="mt-1" value={reservationForm.specialRequests} onChange={(e) => setReservationForm(p => ({ ...p, specialRequests: e.target.value }))} placeholder="Arrivée tardive, préférences..." /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReservation(false)}>Annuler</Button>
+            <Button className="bg-guinea-green hover:bg-guinea-green-light" onClick={handleCreateReservation} disabled={creating || !reservationForm.guestName || !reservationForm.checkIn || !reservationForm.checkOut}>
+              {creating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+              Confirmer la réservation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reservations List Dialog */}
+      <Dialog open={showReservations} onOpenChange={setShowReservations}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-guinea-green" />
+              Mes réservations
+            </DialogTitle>
+            <DialogDescription>{reservations.length} réservation(s)</DialogDescription>
+          </DialogHeader>
+          {reservations.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">
+              <Calendar className="h-10 w-10 mx-auto mb-2 opacity-30" />
+              <p>Aucune réservation</p>
+              <p className="text-xs mt-1">Réservez un hôtel pour commencer</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {reservations.map((res) => (
+                <Card key={res.id} className="cursor-pointer hover:border-guinea-green/50 transition-colors" onClick={() => { setActiveReservation(res); setShowPlanning(true); setShowReservations(false) }}>
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-sm">{res.hotel?.name ?? 'Hôtel'}</p>
+                        <p className="text-xs text-muted-foreground">{res.hotel?.city}, {res.hotel?.region}</p>
+                      </div>
+                      <Badge variant="outline" className={`text-[10px] ${RESERVATION_STATUS_COLORS[res.status] ?? 'bg-gray-100 text-gray-700'}`}>
+                        {RESERVATION_STATUS_LABELS[res.status] ?? res.status}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(res.checkIn)} → {formatDate(res.checkOut)}</span>
+                      <span className="flex items-center gap-1"><User className="h-3 w-3" /> {res.guests} pers.</span>
+                      <span className="flex items-center gap-1"><Bed className="h-3 w-3" /> {ROOM_TYPE_LABELS[res.roomType] ?? res.roomType}</span>
+                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {res.nights} nuit(s)</span>
+                    </div>
+                    {res.confirmationCode && (
+                      <p className="text-xs mt-2 font-mono text-guinea-green">Code: {res.confirmationCode}</p>
+                    )}
+                    {res.planningSteps && res.planningSteps.length > 0 && (
+                      <div className="mt-2">
+                        <Progress value={(res.planningSteps.filter(s => s.status === 'completed').length / res.planningSteps.length) * 100} className="h-1.5" />
+                        <p className="text-[10px] text-muted-foreground mt-1">{res.planningSteps.filter(s => s.status === 'completed').length}/{res.planningSteps.length} étapes complétées</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Planning Timeline Dialog */}
+      <Dialog open={showPlanning} onOpenChange={setShowPlanning}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-guinea-green" />
+              Planning de la réservation
+            </DialogTitle>
+            <DialogDescription>
+              {activeReservation?.hotel?.name} — {activeReservation?.confirmationCode}
+            </DialogDescription>
+          </DialogHeader>
+          {activeReservation?.planningSteps && (
+            <>
+              <div className="mb-3">
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span>Progression</span>
+                  <span className="font-semibold">{activeReservation.planningSteps.filter(s => s.status === 'completed').length}/{activeReservation.planningSteps.length}</span>
+                </div>
+                <Progress value={(activeReservation.planningSteps.filter(s => s.status === 'completed').length / activeReservation.planningSteps.length) * 100} className="h-2" />
+              </div>
+              <div className="space-y-2">
+                {activeReservation.planningSteps.map((step, idx) => {
+                  const StepIcon = PLANNING_STEP_ICONS[step.step] ?? CheckCircle2
+                  const isCompleted = step.status === 'completed'
+                  const isPending = step.status === 'pending'
+                  const isOverdue = isPending && step.scheduledAt && new Date(step.scheduledAt) < new Date()
+                  return (
+                    <div key={step.id} className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+                      isCompleted ? 'bg-emerald-50 border-emerald-200' :
+                      isOverdue ? 'bg-red-50 border-red-200' :
+                      'bg-muted/30 border-muted'
+                    }`}>
+                      {/* Timeline connector */}
+                      <div className="flex flex-col items-center">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                          isCompleted ? 'bg-emerald-500 text-white' :
+                          isOverdue ? 'bg-red-500 text-white' :
+                          'bg-guinea-gold text-white'
+                        }`}>
+                          {isCompleted ? <Check className="h-4 w-4" /> : <StepIcon className="h-4 w-4" />}
+                        </div>
+                        {idx < (activeReservation.planningSteps?.length ?? 0) - 1 && (
+                          <div className={`w-0.5 h-6 ${isCompleted ? 'bg-emerald-300' : 'bg-muted'}`} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-sm font-medium ${isCompleted ? 'text-emerald-700 line-through' : isOverdue ? 'text-red-700' : ''}`}>
+                            {step.label}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            {isCompleted && <Badge className="text-[9px] bg-emerald-500">Fait</Badge>}
+                            {isOverdue && <Badge className="text-[9px] bg-red-500">En retard</Badge>}
+                            {isPending && !isOverdue && <Badge className="text-[9px] bg-amber-500">En attente</Badge>}
+                          </div>
+                        </div>
+                        {step.scheduledAt && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            <Clock className="h-3 w-3 inline mr-1" />
+                            Prévu: {formatDateTime(step.scheduledAt)}
+                          </p>
+                        )}
+                        {step.completedAt && (
+                          <p className="text-xs text-emerald-600 mt-0.5">
+                            <CheckCircle2 className="h-3 w-3 inline mr-1" />
+                            Complété: {formatDateTime(step.completedAt)}
+                          </p>
+                        )}
+                        {!isCompleted && (
+                          <div className="flex gap-1 mt-2">
+                            <Button size="sm" variant="outline" className="h-6 text-[10px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200"
+                              disabled={updatingStep === step.id}
+                              onClick={() => handleUpdateStep(step.id, 'completed')}>
+                              {updatingStep === step.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
+                              Terminer
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-6 text-[10px]" 
+                              disabled={updatingStep === step.id}
+                              onClick={() => handleUpdateStep(step.id, 'skipped')}>
+                              Ignorer
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <Button variant="outline" className="w-full mt-3" onClick={() => setShowAddStep(true)}>
+                <Plus className="h-4 w-4 mr-2" /> Ajouter une étape
+              </Button>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Custom Step Dialog */}
+      <Dialog open={showAddStep} onOpenChange={setShowAddStep}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Ajouter une étape de planning</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label className="text-xs">Identifiant</Label><Input className="mt-1 text-sm" value={newStep.step} onChange={(e) => setNewStep(p => ({ ...p, step: e.target.value }))} placeholder="ex: transport" /></div>
+            <div><Label className="text-xs">Libellé</Label><Input className="mt-1 text-sm" value={newStep.label} onChange={(e) => setNewStep(p => ({ ...p, label: e.target.value }))} placeholder="ex: Organisation transport" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddStep(false)}>Annuler</Button>
+            <Button className="bg-guinea-green hover:bg-guinea-green-light" onClick={handleAddStep} disabled={!newStep.step || !newStep.label}>Ajouter</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Floating mobile reservations button */}
+      <div className="fixed bottom-16 right-4 md:hidden z-50">
+        <Button
+          className="rounded-full h-12 w-12 shadow-lg bg-guinea-gold hover:bg-guinea-gold-light text-black"
+          onClick={() => setShowReservations(true)}
+        >
+          <ClipboardList className="h-5 w-5" />
+        </Button>
+      </div>
+    </div>
   )
 }
 
@@ -563,14 +1181,14 @@ function DashboardPage({ stats, loading, onNavigate }: {
                   <div className="w-6 h-6 rounded bg-blue-600 text-white flex items-center justify-center text-[9px] font-bold">B</div>
                   <span className="text-sm">Booking.com</span>
                 </div>
-                <span className="text-sm font-semibold">{stats.totalHotels > 0 ? '—' : '0'}</span>
+                <span className="text-sm font-semibold">{formatNumber(stats.hotelsWithBooking ?? 0)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold">TA</div>
                   <span className="text-sm">TripAdvisor</span>
                 </div>
-                <span className="text-sm font-semibold">{stats.totalHotels > 0 ? '—' : '0'}</span>
+                <span className="text-sm font-semibold">{formatNumber(stats.hotelsWithTripadvisor ?? 0)}</span>
               </div>
               <Separator className="my-1" />
               <div className="flex items-center justify-between text-sm">
@@ -640,7 +1258,24 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null)
   const [hotelDetail, setHotelDetail] = useState<Hotel | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [availableRegions, setAvailableRegions] = useState<string[]>([])
+  const [editHotel, setEditHotel] = useState<Hotel | null>(null)
+  const [editForm, setEditForm] = useState<Record<string, unknown>>({})
+  const [editSaving, setEditSaving] = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const limit = 15
+
+  // Fetch available regions from stats
+  useEffect(() => {
+    fetch('/api/stats')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.byRegion) {
+          setAvailableRegions(Object.keys(data.byRegion).sort())
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const fetchHotels = useCallback(async () => {
     setLoading(true)
@@ -718,6 +1353,49 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
     }
   }
 
+  const handleEditHotel = (hotel: Hotel) => {
+    setEditHotel(hotel)
+    setEditForm({
+      name: hotel.name,
+      city: hotel.city,
+      region: hotel.region,
+      stars: hotel.stars,
+      phone: hotel.phone ?? '',
+      email: hotel.email ?? '',
+      web: hotel.web ?? '',
+      rooms: hotel.rooms,
+      priceUsd: hotel.priceUsd ?? '',
+      notes: hotel.notes ?? '',
+      address: hotel.address ?? '',
+      priority: hotel.priority,
+      pipelineStage: hotel.pipelineStage,
+      statusDigital: hotel.statusDigital,
+    })
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editHotel) return
+    setEditSaving(true)
+    try {
+      const res = await fetch(`/api/hotels/${editHotel.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      })
+      if (res.ok) {
+        toast({ title: 'Mis à jour', description: 'Hôtel modifié avec succès' })
+        setEditHotel(null)
+        fetchHotels()
+      } else {
+        toast({ title: 'Erreur', description: 'Impossible de modifier', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Erreur', description: 'Connexion impossible', variant: 'destructive' })
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
   const handleDeleteHotel = async (id: string) => {
     try {
       const res = await fetch(`/api/hotels/${id}`, { method: 'DELETE' })
@@ -750,14 +1428,9 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
               <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Région" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Toutes régions</SelectItem>
-                <SelectItem value="Conakry">Conakry</SelectItem>
-                <SelectItem value="Kankan">Kankan</SelectItem>
-                <SelectItem value="Kindia">Kindia</SelectItem>
-                <SelectItem value="Nzérékoré">Nzérékoré</SelectItem>
-                <SelectItem value="Boké">Boké</SelectItem>
-                <SelectItem value="Labé">Labé</SelectItem>
-                <SelectItem value="Mamou">Mamou</SelectItem>
-                <SelectItem value="Faranah">Faranah</SelectItem>
+                {availableRegions.map((r) => (
+                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1) }}>
@@ -872,7 +1545,10 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setSelectedHotel(hotel); fetchHotelDetail(hotel.id) }}>
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteHotel(hotel.id) }}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleEditHotel(hotel) }}>
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(hotel.id) }}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -885,6 +1561,96 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Hotel Dialog */}
+      <Dialog open={!!editHotel} onOpenChange={(open) => { if (!open) setEditHotel(null) }}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-guinea-green" />
+              Modifier l&apos;hôtel
+            </DialogTitle>
+            <DialogDescription>{editHotel?.name}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Nom</Label><Input className="mt-1 text-sm" value={String(editForm.name ?? '')} onChange={(e) => setEditForm(p => ({ ...p, name: e.target.value }))} /></div>
+              <div><Label className="text-xs">Ville</Label><Input className="mt-1 text-sm" value={String(editForm.city ?? '')} onChange={(e) => setEditForm(p => ({ ...p, city: e.target.value }))} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Région</Label><Input className="mt-1 text-sm" value={String(editForm.region ?? '')} onChange={(e) => setEditForm(p => ({ ...p, region: e.target.value }))} /></div>
+              <div><Label className="text-xs">Étoiles</Label><Input type="number" min={0} max={5} className="mt-1 text-sm" value={String(editForm.stars ?? 0)} onChange={(e) => setEditForm(p => ({ ...p, stars: parseInt(e.target.value) || 0 }))} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Téléphone</Label><Input className="mt-1 text-sm" value={String(editForm.phone ?? '')} onChange={(e) => setEditForm(p => ({ ...p, phone: e.target.value }))} /></div>
+              <div><Label className="text-xs">Email</Label><Input className="mt-1 text-sm" value={String(editForm.email ?? '')} onChange={(e) => setEditForm(p => ({ ...p, email: e.target.value }))} /></div>
+            </div>
+            <div><Label className="text-xs">Site web</Label><Input className="mt-1 text-sm" value={String(editForm.web ?? '')} onChange={(e) => setEditForm(p => ({ ...p, web: e.target.value }))} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Chambres</Label><Input type="number" min={0} className="mt-1 text-sm" value={String(editForm.rooms ?? 0)} onChange={(e) => setEditForm(p => ({ ...p, rooms: parseInt(e.target.value) || 0 }))} /></div>
+              <div><Label className="text-xs">Prix (USD)</Label><Input className="mt-1 text-sm" value={String(editForm.priceUsd ?? '')} onChange={(e) => setEditForm(p => ({ ...p, priceUsd: e.target.value }))} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Priorité</Label>
+                <Select value={String(editForm.priority ?? 'cold')} onValueChange={(v) => setEditForm(p => ({ ...p, priority: v }))}>
+                  <SelectTrigger className="mt-1 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hot">🔥 HOT</SelectItem>
+                    <SelectItem value="warm">🌤 Tiède</SelectItem>
+                    <SelectItem value="cold">❄️ Froid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Pipeline</Label>
+                <Select value={String(editForm.pipelineStage ?? 'nouveau')} onValueChange={(v) => setEditForm(p => ({ ...p, pipelineStage: v }))}>
+                  <SelectTrigger className="mt-1 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(STAGE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Adresse</Label>
+              <Input className="mt-1 text-sm" value={String(editForm.address ?? '')} onChange={(e) => setEditForm(p => ({ ...p, address: e.target.value }))} />
+            </div>
+            <div>
+              <Label className="text-xs">Notes</Label>
+              <Textarea className="mt-1 text-sm" value={String(editForm.notes ?? '')} onChange={(e) => setEditForm(p => ({ ...p, notes: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditHotel(null)}>Annuler</Button>
+            <Button className="bg-guinea-green hover:bg-guinea-green-light" onClick={handleSaveEdit} disabled={editSaving}>
+              {editSaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+              Sauvegarder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-guinea-red">
+              <AlertTriangle className="h-5 w-5" />
+              Confirmer la suppression
+            </DialogTitle>
+            <DialogDescription>
+              Cette action est irréversible. L&apos;hôtel et toutes ses données associées seront définitivement supprimés.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Annuler</Button>
+            <Button variant="destructive" onClick={() => { if (deleteConfirmId) { handleDeleteHotel(deleteConfirmId); setDeleteConfirmId(null) } }}>
+              <Trash2 className="h-4 w-4 mr-1" /> Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Hotel Detail Dialog */}
       <Dialog open={!!selectedHotel} onOpenChange={(open) => { if (!open) { setSelectedHotel(null); setHotelDetail(null) } }}>
@@ -1825,6 +2591,8 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState<string | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)
+  const [agency, setAgency] = useState({ name: '', email: '', phone: '', website: '', address: '' })
+  const [agencySaving, setAgencySaving] = useState(false)
 
   const fetchProviders = useCallback(async () => {
     setLoading(true)
@@ -1850,7 +2618,46 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
     }
   }, [])
 
-  useEffect(() => { fetchProviders(); fetchStats() }, [fetchProviders, fetchStats])
+  const fetchAgency = useCallback(async () => {
+    try {
+      const res = await fetch('/api/agency')
+      if (res.ok) {
+        const data = await res.json()
+        const s = data.settings
+        setAgency({
+          name: s.name ?? '',
+          email: s.email ?? '',
+          phone: s.phone ?? '',
+          website: s.website ?? '',
+          address: s.address ?? '',
+        })
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  useEffect(() => { fetchProviders(); fetchStats(); fetchAgency() }, [fetchProviders, fetchStats, fetchAgency])
+
+  const handleSaveAgency = async () => {
+    setAgencySaving(true)
+    try {
+      const res = await fetch('/api/agency', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(agency),
+      })
+      if (res.ok) {
+        toast({ title: 'Sauvegardé', description: 'Informations de l\'agence mises à jour' })
+      } else {
+        toast({ title: 'Erreur', description: 'Impossible de sauvegarder', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Erreur', description: 'Connexion impossible', variant: 'destructive' })
+    } finally {
+      setAgencySaving(false)
+    }
+  }
 
   const handleSaveKey = async (providerId: string) => {
     const key = apiKeys[providerId]
@@ -1970,22 +2777,29 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-xs">Nom de l&apos;agence</Label>
-                  <Input placeholder="HotelScout Guinea" className="mt-1" />
+                  <Input placeholder="HotelScout Guinea" className="mt-1" value={agency.name} onChange={(e) => setAgency(p => ({ ...p, name: e.target.value }))} />
                 </div>
                 <div>
                   <Label className="text-xs">Email de contact</Label>
-                  <Input placeholder="contact@hotelscout-gn.com" className="mt-1" />
+                  <Input placeholder="contact@hotelscout-gn.com" className="mt-1" value={agency.email} onChange={(e) => setAgency(p => ({ ...p, email: e.target.value }))} />
                 </div>
                 <div>
                   <Label className="text-xs">Téléphone</Label>
-                  <Input placeholder="+224 XXX XXX XXX" className="mt-1" />
+                  <Input placeholder="+224 XXX XXX XXX" className="mt-1" value={agency.phone} onChange={(e) => setAgency(p => ({ ...p, phone: e.target.value }))} />
                 </div>
                 <div>
                   <Label className="text-xs">Site web</Label>
-                  <Input placeholder="https://hotelscout-gn.com" className="mt-1" />
+                  <Input placeholder="https://hotelscout-gn.com" className="mt-1" value={agency.website} onChange={(e) => setAgency(p => ({ ...p, website: e.target.value }))} />
                 </div>
               </div>
-              <Button className="bg-guinea-green hover:bg-guinea-green-light">Sauvegarder</Button>
+              <div>
+                <Label className="text-xs">Adresse</Label>
+                <Input placeholder="Conakry, Guinée" className="mt-1" value={agency.address} onChange={(e) => setAgency(p => ({ ...p, address: e.target.value }))} />
+              </div>
+              <Button className="bg-guinea-green hover:bg-guinea-green-light" onClick={handleSaveAgency} disabled={agencySaving}>
+                {agencySaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+                Sauvegarder
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -2046,7 +2860,7 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
 // ============================================================================
 
 export default function Home() {
-  const [activePage, setActivePage] = useState<PageType>('dashboard')
+  const [activePage, setActivePage] = useState<PageType>('menu')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [stats, setStats] = useState<Stats | null>(null)
@@ -2090,6 +2904,8 @@ export default function Home() {
 
   const renderPage = () => {
     switch (activePage) {
+      case 'menu':
+        return <MenuReservationPage toast={toast} onNavigate={handlePageChange} />
       case 'dashboard':
         return <DashboardPage stats={stats} loading={statsLoading} onNavigate={handlePageChange} />
       case 'hotels':

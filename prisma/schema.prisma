@@ -54,6 +54,7 @@ model Hotel {
   contacts        Contact[]
   aiAnalyses      AIAnalysis[]
   verificationLogs VerificationLog[]
+  reservations    Reservation[]
 }
 
 model AIProvider {
@@ -106,6 +107,59 @@ model VerificationLog {
   checkedAt   DateTime @default(now())
 
   @@index([hotelId])
+}
+
+model Reservation {
+  id              String   @id @default(cuid())
+  hotelId         String
+  hotel           Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  checkIn         DateTime
+  checkOut        DateTime
+  guests          Int      @default(1)
+  roomType        String   @default("standard") // "standard" | "superior" | "deluxe" | "suite"
+  specialRequests String?
+  guestName       String
+  guestEmail      String?
+  guestPhone      String?
+  status          String   @default("pending") // "pending" | "confirmed" | "cancelled" | "completed"
+  confirmationCode String? @unique
+  nights          Int      @default(1)
+  totalPrice      Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  planningSteps   PlanningStep[]
+
+  @@index([hotelId])
+  @@index([status])
+}
+
+model PlanningStep {
+  id            String    @id @default(cuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  step          String    // "reservation" | "confirmation" | "payment" | "checkin_reminder" | "checkin" | "checkout" | "feedback" | custom
+  label         String
+  status        String    @default("pending") // "pending" | "in_progress" | "completed" | "skipped"
+  scheduledAt   DateTime?
+  completedAt   DateTime?
+  notes         String?
+  order         Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([reservationId])
+}
+
+model AgencySettings {
+  id          String   @id @default(cuid())
+  name        String   @default("HotelScout Guinea")
+  email       String?
+  phone       String?
+  website     String?
+  address     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model CollectionLog {

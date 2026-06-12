@@ -16,6 +16,10 @@ export async function GET() {
       hotelsWithPhone,
       hotelsWithEmail,
       priorityDistributionRaw,
+      hotelsWithBooking,
+      hotelsWithTripadvisor,
+      totalReservations,
+      pendingReservations,
     ] = await Promise.all([
       db.hotel.count(),
 
@@ -44,7 +48,7 @@ export async function GET() {
       db.contact.count({
         where: {
           createdAt: {
-            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // last 7 days
+            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
           },
         },
       }),
@@ -62,6 +66,14 @@ export async function GET() {
         _count: { priority: true },
         orderBy: { _count: { priority: 'desc' } },
       }),
+
+      db.hotel.count({ where: { hasBooking: true } }),
+
+      db.hotel.count({ where: { hasTripadvisor: true } }),
+
+      db.reservation.count(),
+
+      db.reservation.count({ where: { status: 'pending' } }),
     ])
 
     // Transform raw groupBy results into clean objects
@@ -109,6 +121,10 @@ export async function GET() {
       hotelsWithWebsite,
       hotelsWithPhone,
       hotelsWithEmail,
+      hotelsWithBooking,
+      hotelsWithTripadvisor,
+      totalReservations,
+      pendingReservations,
       lastUpdated: new Date().toISOString(),
     })
   } catch (error) {
