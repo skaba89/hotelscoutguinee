@@ -1,0 +1,502 @@
+   500→   500→        setReservations(data.reservations)
+   501→   501→      }
+   502→   502→    } catch {
+   503→   503→      /* ignore */
+   504→   504→    }
+   505→   505→  }, [])
+   506→   506→
+   507→   507→  useEffect(() => { fetchReservations() }, [fetchReservations])
+   508→   508→
+   509→   509→  // Derived data
+   510→   510→  const regions = stats ? Object.keys(stats.byRegion).sort() : []
+   511→   511→  const categories = ['all', ...new Set(hotels.map(h => h.stars > 0 ? `${h.stars} étoiles` : 'Non classé'))].filter(Boolean)
+   512→   512→
+   513→   513→  const filteredHotels = hotels.filter(h => {
+   514→   514→    if (search && !h.name.toLowerCase().includes(search.toLowerCase()) && !h.city.toLowerCase().includes(search.toLowerCase())) return false
+   515→   515→    if (selectedRegion !== 'all' && h.region !== selectedRegion) return false
+   516→   516→    if (selectedCategory !== 'all') {
+   517→   517→      if (selectedCategory === 'Non classé' && h.stars > 0) return false
+   518→   518→      if (selectedCategory !== 'Non classé' && h.stars !== parseInt(selectedCategory)) return false
+   519→   519→    }
+   520→   520→    return true
+   521→   521→  })
+   522→   522→
+   523→   523→  const handleCreateReservation = async () => {
+   524→   524→    if (!selectedHotel || !reservationForm.guestName || !reservationForm.checkIn || !reservationForm.checkOut) {
+   525→   525→      toast({ title: 'Champs manquants', description: 'Remplissez le nom, les dates et sélectionnez un hôtel', variant: 'destructive' })
+   526→   526→      return
+   527→   527→    }
+   528→   528→    setCreating(true)
+   529→   529→    try {
+   530→   530→      const res = await fetch('/api/reservations', {
+   531→   531→        method: 'POST',
+   532→   532→        headers: { 'Content-Type': 'application/json' },
+   533→   533→        body: JSON.stringify({
+   534→   534→          hotelId: selectedHotel.id,
+   535→   535→          ...reservationForm,
+   536→   536→        }),
+   537→   537→      })
+   538→   538→      if (res.ok) {
+   539→   539→        const data = await res.json()
+   540→   540→        toast({ title: 'Réservation créée', description: `Confirmation: ${data.reservation.confirmationCode}` })
+   541→   541→        setShowReservation(false)
+   542→   542→        setActiveReservation(data.reservation)
+   543→   543→        setShowPlanning(true)
+   544→   544→        fetchReservations()
+   545→   545→        setReservationForm({ guestName: '', guestEmail: '', guestPhone: '', checkIn: '', checkOut: '', guests: 1, roomType: 'standard', specialRequests: '' })
+   546→   546→      } else {
+   547→   547→        const data = await res.json()
+   548→   548→        toast({ title: 'Erreur', description: data.error || 'Impossible de créer la réservation', variant: 'destructive' })
+   549→   549→      }
+   550→   550→    } catch {
+   551→   551→      toast({ title: 'Erreur', description: 'Connexion impossible', variant: 'destructive' })
+   552→   552→    } finally {
+   553→   553→      setCreating(false)
+   554→   554→    }
+   555→   555→  }
+   556→   556→
+   557→   557→  const handleUpdateStep = async (stepId: string, status: string) => {
+   558→   558→    setUpdatingStep(stepId)
+   559→   559→    try {
+   560→   560→      const res = await fetch('/api/planning', {
+   561→   561→        method: 'PATCH',
+   562→   562→        headers: { 'Content-Type': 'application/json' },
+   563→   563→        body: JSON.stringify({ stepId, status }),
+   564→   564→      })
+   565→   565→      if (res.ok) {
+   566→   566→        toast({ title: 'Étape mise à jour', description: status === 'completed' ? 'Étape terminée' : status === 'skipped' ? 'Étape ignorée' : 'Étape en cours' })
+   567→   567→        // Refresh the active reservation
+   568→   568→        if (activeReservation) {
+   569→   569→          const res2 = await fetch(`/api/reservations/${activeReservation.id}`)
+   570→   570→          if (res2.ok) {
+   571→   571→            const data = await res2.json()
+   572→   572→            setActiveReservation(data.reservation)
+   573→   573→          }
+   574→   574→        }
+   575→   575→        fetchReservations()
+   576→   576→      }
+   577→   577→    } catch {
+   578→   578→      toast({ title: 'Erreur', description: 'Impossible de mettre à jour', variant: 'destructive' })
+   579→   579→    } finally {
+   580→   580→      setUpdatingStep(null)
+   581→   581→    }
+   582→   582→  }
+   583→   583→
+   584→   584→  const handleAddStep = async () => {
+   585→   585→    if (!activeReservation || !newStep.step || !newStep.label) return
+   586→   586→    try {
+   587→   587→      const res = await fetch('/api/planning', {
+   588→   588→        method: 'POST',
+   589→   589→        headers: { 'Content-Type': 'application/json' },
+   590→   590→        body: JSON.stringify({ reservationId: activeReservation.id, step: newStep.step, label: newStep.label }),
+   591→   591→      })
+   592→   592→      if (res.ok) {
+   593→   593→        toast({ title: 'Étape ajoutée', description: 'Nouvelle étape de planning ajoutée' })
+   594→   594→        setShowAddStep(false)
+   595→   595→        setNewStep({ step: '', label: '' })
+   596→   596→        // Refresh
+   597→   597→        const res2 = await fetch(`/api/reservations/${activeReservation.id}`)
+   598→   598→        if (res2.ok) {
+   599→   599→          const data = await res2.json()
+   600→   600→          setActiveReservation(data.reservation)
+   601→   601→        }
+   602→   602→      }
+   603→   603→    } catch {
+   604→   604→      toast({ title: 'Erreur', description: 'Impossible d\'ajouter l\'étape', variant: 'destructive' })
+   605→   605→    }
+   606→   606→  }
+   607→   607→
+   608→   608→  if (loading) {
+   609→   609→    return (
+   610→   610→      <div className="space-y-6">
+   611→   611→        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   612→   612→          {Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)}
+   613→   613→        </div>
+   614→   614→        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+   615→   615→          {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
+   616→   616→        </div>
+   617→   617→      </div>
+   618→   618→    )
+   619→   619→  }
+   620→   620→
+   621→   621→  return (
+   622→   622→    <div className="space-y-6">
+   623→   623→      {/* Hero Section */}
+   624→   624→      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-guinea-green via-guinea-green-light to-guinea-green p-8 text-white">
+   625→   625→        <div className="absolute inset-0 opacity-10">
+   626→   626→          <div className="absolute top-4 right-8 text-9xl font-bold opacity-20">GH</div>
+   627→   627→        </div>
+   628→   628→        <div className="relative z-10">
+   629→   629→          <h1 className="text-2xl md:text-3xl font-bold mb-2">HotelScout Guinée</h1>
+   630→   630→          <p className="text-white/80 text-sm md:text-base mb-4">Trouvez et réservez le meilleur hôtel en Guinée — Planifiez votre séjour de bout en bout</p>
+   631→   631→          <div className="flex flex-wrap gap-3">
+   632→   632→            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 text-sm">
+   633→   633→              <span className="font-bold text-lg">{stats?.totalHotels ?? 0}</span> hôtels
+   634→   634→            </div>
+   635→   635→            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 text-sm">
+   636→   636→              <span className="font-bold text-lg">{regions.length}</span> régions
+   637→   637→            </div>
+   638→   638→            <div className="bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 text-sm">
+   639→   639→              <span className="font-bold text-lg">{reservations.length}</span> réservations
+   640→   640→            </div>
+   641→   641→            <Button
+   642→   642→              variant="secondary"
+   643→   643→              className="bg-guinea-gold hover:bg-guinea-gold-light text-black"
+   644→   644→              onClick={() => setShowReservations(true)}
+   645→   645→            >
+   646→   646→              <ClipboardList className="h-4 w-4 mr-2" />
+   647→   647→              Mes réservations
+   648→   648→            </Button>
+   649→   649→          </div>
+   650→   650→        </div>
+   651→   651→      </div>
+   652→   652→
+   653→   653→      {/* Search & Filters */}
+   654→   654→      <Card>
+   655→   655→        <CardContent className="pt-4 pb-4">
+   656→   656→          <div className="flex flex-col sm:flex-row gap-3">
+   657→   657→            <div className="flex-1 relative">
+   658→   658→              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+   659→   659→              <Input
+   660→   660→                placeholder="Rechercher un hôtel ou une ville..."
+   661→   661→                className="pl-9"
+   662→   662→                value={search}
+   663→   663→                onChange={(e) => setSearch(e.target.value)}
+   664→   664→              />
+   665→   665→            </div>
+   666→   666→            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+   667→   667→              <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Région" /></SelectTrigger>
+   668→   668→              <SelectContent>
+   669→   669→                <SelectItem value="all">Toutes les régions</SelectItem>
+   670→   670→                {regions.map((r) => (
+   671→   671→                  <SelectItem key={r} value={r}>{r}</SelectItem>
+   672→   672→                ))}
+   673→   673→              </SelectContent>
+   674→   674→            </Select>
+   675→   675→            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+   676→   676→              <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Catégorie" /></SelectTrigger>
+   677→   677→              <SelectContent>
+   678→   678→                <SelectItem value="all">Toutes</SelectItem>
+   679→   679→                {categories.filter(c => c !== 'all').map((c) => (
+   680→   680→                  <SelectItem key={c} value={c}>{c}</SelectItem>
+   681→   681→                ))}
+   682→   682→              </SelectContent>
+   683→   683→            </Select>
+   684→   684→          </div>
+   685→   685→          <div className="flex items-center justify-between mt-3">
+   686→   686→            <span className="text-xs text-muted-foreground">{filteredHotels.length} hôtels trouvés</span>
+   687→   687→          </div>
+   688→   688→        </CardContent>
+   689→   689→      </Card>
+   690→   690→
+   691→   691→      {/* Hotels Grid */}
+   692→   692→      {filteredHotels.length === 0 ? (
+   693→   693→        <Card>
+   694→   694→          <CardContent className="py-12 text-center text-muted-foreground">
+   695→   695→            <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+   696→   696→            <p>Aucun hôtel trouvé</p>
+   697→   697→            <p className="text-xs mt-1">Modifiez vos critères de recherche</p>
+   698→   698→          </CardContent>
+   699→   699→        </Card>
+   700→   700→      ) : (
+   701→   701→        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+   702→   702→          {filteredHotels.map((hotel) => (
+   703→   703→            <Card key={hotel.id} className="transition-all hover:shadow-lg hover:-translate-y-0.5 group">
+   704→   704→              <CardHeader className="pb-2">
+   705→   705→                <div className="flex items-start justify-between">
+   706→   706→                  <div>
+   707→   707→                    <CardTitle className="text-sm font-semibold group-hover:text-guinea-green transition-colors">{hotel.name}</CardTitle>
+   708→   708→                    <CardDescription className="text-xs flex items-center gap-1 mt-1">
+   709→   709→                      <MapPin className="h-3 w-3" /> {hotel.city}, {hotel.region}
+   710→   710→                    </CardDescription>
+   711→   711→                  </div>
+   712→   712→                  {hotel.stars > 0 && (
+   713→   713→                    <div className="flex">
+   714→   714→                      {Array.from({ length: Math.min(hotel.stars, 5) }).map((_, i) => (
+   715→   715→                        <Star key={i} className="h-3 w-3 fill-guinea-gold text-guinea-gold" />
+   716→   716→                      ))}
+   717→   717→                    </div>
+   718→   718→                  )}
+   719→   719→                </div>
+   720→   720→              </CardHeader>
+   721→   721→              <CardContent className="pt-0">
+   722→   722→                <div className="flex flex-wrap gap-1.5 mb-3">
+   723→   723→                  <Badge variant="outline" className={`text-[10px] ${DIGITAL_STATUS_COLORS[hotel.statusDigital]}`}>
+   724→   724→                    {DIGITAL_STATUS_LABELS[hotel.statusDigital]}
+   725→   725→                  </Badge>
+   726→   726→                  {hotel.hasBooking && <Badge className="text-[9px] h-5 bg-blue-600">Booking</Badge>}
+   727→   727→                  {hotel.hasTripadvisor && <Badge className="text-[9px] h-5 bg-emerald-600">TA</Badge>}
+   728→   728→                  <Badge variant="outline" className={`text-[10px] ${PRIORITY_COLORS[hotel.priority]}`}>
+   729→   729→                    {hotel.priority.toUpperCase()}
+   730→   730→                  </Badge>
+   731→   731→                </div>
+   732→   732→                {hotel.rooms > 0 && (
+   733→   733→                  <p className="text-xs text-muted-foreground mb-1"><Bed className="h-3 w-3 inline mr-1" />{hotel.rooms} chambres</p>
+   734→   734→                )}
+   735→   735→                {hotel.priceUsd && (
+   736→   736→                  <p className="text-xs text-muted-foreground mb-2">A partir de <span className="font-semibold text-guinea-green">{hotel.priceUsd}</span></p>
+   737→   737→                )}
+   738→   738→                <div className="flex gap-2 mt-2">
+   739→   739→                  {hotel.phone && (
+   740→   740→                    <a href={`tel:${hotel.phone}`} className="text-xs flex items-center gap-1 text-guinea-green hover:underline">
+   741→   741→                      <Phone className="h-3 w-3" /> Appeler
+   742→   742→                    </a>
+   743→   743→                  )}
+   744→   744→                  {hotel.email && (
+   745→   745→                    <a href={`mailto:${hotel.email}`} className="text-xs flex items-center gap-1 text-guinea-green hover:underline">
+   746→   746→                      <Mail className="h-3 w-3" /> Email
+   747→   747→                    </a>
+   748→   748→                  )}
+   749→   749→                </div>
+   750→   750→                <Button
+   751→   751→                  className="w-full mt-3 bg-guinea-green hover:bg-guinea-green-light text-sm h-9"
+   752→   752→                  onClick={() => { setSelectedHotel(hotel); setShowReservation(true) }}
+   753→   753→                >
+   754→   754→                  <Calendar className="h-4 w-4 mr-2" /> Réserver
+   755→   755→                </Button>
+   756→   756→              </CardContent>
+   757→   757→            </Card>
+   758→   758→          ))}
+   759→   759→        </div>
+   760→   760→      )}
+   761→   761→
+   762→   762→      {/* Reservation Dialog */}
+   763→   763→      <Dialog open={showReservation} onOpenChange={setShowReservation}>
+   764→   764→        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+   765→   765→          <DialogHeader>
+   766→   766→            <DialogTitle className="flex items-center gap-2">
+   767→   767→              <Calendar className="h-5 w-5 text-guinea-green" />
+   768→   768→              Réserver — {selectedHotel?.name}
+   769→   769→            </DialogTitle>
+   770→   770→            <DialogDescription>
+   771→   771→              {selectedHotel?.city}, {selectedHotel?.region}
+   772→   772→              {selectedHotel?.stars ? ` — ${selectedHotel.stars} étoiles` : ''}
+   773→   773→            </DialogDescription>
+   774→   774→          </DialogHeader>
+   775→   775→          <div className="space-y-3">
+   776→   776→            <div><Label className="text-xs">Nom complet *</Label><Input className="mt-1" value={reservationForm.guestName} onChange={(e) => setReservationForm(p => ({ ...p, guestName: e.target.value }))} placeholder="Votre nom" /></div>
+   777→   777→            <div className="grid grid-cols-2 gap-3">
+   778→   778→              <div><Label className="text-xs">Email</Label><Input type="email" className="mt-1" value={reservationForm.guestEmail} onChange={(e) => setReservationForm(p => ({ ...p, guestEmail: e.target.value }))} placeholder="email@exemple.com" /></div>
+   779→   779→              <div><Label className="text-xs">Téléphone</Label><Input className="mt-1" value={reservationForm.guestPhone} onChange={(e) => setReservationForm(p => ({ ...p, guestPhone: e.target.value }))} placeholder="+224 XXX XXX XXX" /></div>
+   780→   780→            </div>
+   781→   781→            <div className="grid grid-cols-2 gap-3">
+   782→   782→              <div><Label className="text-xs">Date d&apos;arrivée *</Label><Input type="date" className="mt-1" value={reservationForm.checkIn} onChange={(e) => setReservationForm(p => ({ ...p, checkIn: e.target.value }))} /></div>
+   783→   783→              <div><Label className="text-xs">Date de départ *</Label><Input type="date" className="mt-1" value={reservationForm.checkOut} onChange={(e) => setReservationForm(p => ({ ...p, checkOut: e.target.value }))} /></div>
+   784→   784→            </div>
+   785→   785→            <div className="grid grid-cols-2 gap-3">
+   786→   786→              <div>
+   787→   787→                <Label className="text-xs">Nombre de personnes</Label>
+   788→   788→                <Input type="number" min={1} max={10} className="mt-1" value={reservationForm.guests} onChange={(e) => setReservationForm(p => ({ ...p, guests: parseInt(e.target.value) || 1 }))} />
+   789→   789→              </div>
+   790→   790→              <div>
+   791→   791→                <Label className="text-xs">Type de chambre</Label>
+   792→   792→                <Select value={reservationForm.roomType} onValueChange={(v) => setReservationForm(p => ({ ...p, roomType: v }))}>
+   793→   793→                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+   794→   794→                  <SelectContent>
+   795→   795→                    {Object.entries(ROOM_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+   796→   796→                  </SelectContent>
+   797→   797→                </Select>
+   798→   798→              </div>
+   799→   799→            </div>
+   800→   800→            <div><Label className="text-xs">Demandes spéciales</Label><Textarea className="mt-1" value={reservationForm.specialRequests} onChange={(e) => setReservationForm(p => ({ ...p, specialRequests: e.target.value }))} placeholder="Arrivée tardive, préférences..." /></div>
+   801→   801→          </div>
+   802→   802→          <DialogFooter>
+   803→   803→            <Button variant="outline" onClick={() => setShowReservation(false)}>Annuler</Button>
+   804→   804→            <Button className="bg-guinea-green hover:bg-guinea-green-light" onClick={handleCreateReservation} disabled={creating || !reservationForm.guestName || !reservationForm.checkIn || !reservationForm.checkOut}>
+   805→   805→              {creating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+   806→   806→              Confirmer la réservation
+   807→   807→            </Button>
+   808→   808→          </DialogFooter>
+   809→   809→        </DialogContent>
+   810→   810→      </Dialog>
+   811→   811→
+   812→   812→      {/* Reservations List Dialog */}
+   813→   813→      <Dialog open={showReservations} onOpenChange={setShowReservations}>
+   814→   814→        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+   815→   815→          <DialogHeader>
+   816→   816→            <DialogTitle className="flex items-center gap-2">
+   817→   817→              <ClipboardList className="h-5 w-5 text-guinea-green" />
+   818→   818→              Mes réservations
+   819→   819→            </DialogTitle>
+   820→   820→            <DialogDescription>{reservations.length} réservation(s)</DialogDescription>
+   821→   821→          </DialogHeader>
+   822→   822→          {reservations.length === 0 ? (
+   823→   823→            <div className="py-8 text-center text-muted-foreground">
+   824→   824→              <Calendar className="h-10 w-10 mx-auto mb-2 opacity-30" />
+   825→   825→              <p>Aucune réservation</p>
+   826→   826→              <p className="text-xs mt-1">Réservez un hôtel pour commencer</p>
+   827→   827→            </div>
+   828→   828→          ) : (
+   829→   829→            <div className="space-y-3">
+   830→   830→              {reservations.map((res) => (
+   831→   831→                <Card key={res.id} className="cursor-pointer hover:border-guinea-green/50 transition-colors" onClick={() => { setActiveReservation(res); setShowPlanning(true); setShowReservations(false) }}>
+   832→   832→                  <CardContent className="pt-4 pb-3">
+   833→   833→                    <div className="flex items-start justify-between">
+   834→   834→                      <div>
+   835→   835→                        <p className="font-medium text-sm">{res.hotel?.name ?? 'Hôtel'}</p>
+   836→   836→                        <p className="text-xs text-muted-foreground">{res.hotel?.city}, {res.hotel?.region}</p>
+   837→   837→                      </div>
+   838→   838→                      <Badge variant="outline" className={`text-[10px] ${RESERVATION_STATUS_COLORS[res.status] ?? 'bg-gray-100 text-gray-700'}`}>
+   839→   839→                        {RESERVATION_STATUS_LABELS[res.status] ?? res.status}
+   840→   840→                      </Badge>
+   841→   841→                    </div>
+   842→   842→                    <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
+   843→   843→                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(res.checkIn)} → {formatDate(res.checkOut)}</span>
+   844→   844→                      <span className="flex items-center gap-1"><User className="h-3 w-3" /> {res.guests} pers.</span>
+   845→   845→                      <span className="flex items-center gap-1"><Bed className="h-3 w-3" /> {ROOM_TYPE_LABELS[res.roomType] ?? res.roomType}</span>
+   846→   846→                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {res.nights} nuit(s)</span>
+   847→   847→                    </div>
+   848→   848→                    {res.confirmationCode && (
+   849→   849→                      <p className="text-xs mt-2 font-mono text-guinea-green">Code: {res.confirmationCode}</p>
+   850→   850→                    )}
+   851→   851→                    {res.planningSteps && res.planningSteps.length > 0 && (
+   852→   852→                      <div className="mt-2">
+   853→   853→                        <Progress value={(res.planningSteps.filter(s => s.status === 'completed').length / res.planningSteps.length) * 100} className="h-1.5" />
+   854→   854→                        <p className="text-[10px] text-muted-foreground mt-1">{res.planningSteps.filter(s => s.status === 'completed').length}/{res.planningSteps.length} étapes complétées</p>
+   855→   855→                      </div>
+   856→   856→                    )}
+   857→   857→                  </CardContent>
+   858→   858→                </Card>
+   859→   859→              ))}
+   860→   860→            </div>
+   861→   861→          )}
+   862→   862→        </DialogContent>
+   863→   863→      </Dialog>
+   864→   864→
+   865→   865→      {/* Planning Timeline Dialog */}
+   866→   866→      <Dialog open={showPlanning} onOpenChange={setShowPlanning}>
+   867→   867→        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+   868→   868→          <DialogHeader>
+   869→   869→            <DialogTitle className="flex items-center gap-2">
+   870→   870→              <ClipboardList className="h-5 w-5 text-guinea-green" />
+   871→   871→              Planning de la réservation
+   872→   872→            </DialogTitle>
+   873→   873→            <DialogDescription>
+   874→   874→              {activeReservation?.hotel?.name} — {activeReservation?.confirmationCode}
+   875→   875→            </DialogDescription>
+   876→   876→          </DialogHeader>
+   877→   877→          {activeReservation?.planningSteps && (
+   878→   878→            <>
+   879→   879→              <div className="mb-3">
+   880→   880→                <div className="flex items-center justify-between text-xs mb-1">
+   881→   881→                  <span>Progression</span>
+   882→   882→                  <span className="font-semibold">{activeReservation.planningSteps.filter(s => s.status === 'completed').length}/{activeReservation.planningSteps.length}</span>
+   883→   883→                </div>
+   884→   884→                <Progress value={(activeReservation.planningSteps.filter(s => s.status === 'completed').length / activeReservation.planningSteps.length) * 100} className="h-2" />
+   885→   885→              </div>
+   886→   886→              <div className="space-y-2">
+   887→   887→                {activeReservation.planningSteps.map((step, idx) => {
+   888→   888→                  const StepIcon = PLANNING_STEP_ICONS[step.step] ?? CheckCircle2
+   889→   889→                  const isCompleted = step.status === 'completed'
+   890→   890→                  const isPending = step.status === 'pending'
+   891→   891→                  const isOverdue = isPending && step.scheduledAt && new Date(step.scheduledAt) < new Date()
+   892→   892→                  return (
+   893→   893→                    <div key={step.id} className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+   894→   894→                      isCompleted ? 'bg-emerald-50 border-emerald-200' :
+   895→   895→                      isOverdue ? 'bg-red-50 border-red-200' :
+   896→   896→                      'bg-muted/30 border-muted'
+   897→   897→                    }`}>
+   898→   898→                      {/* Timeline connector */}
+   899→   899→                      <div className="flex flex-col items-center">
+   900→   900→                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+   901→   901→                          isCompleted ? 'bg-emerald-500 text-white' :
+   902→   902→                          isOverdue ? 'bg-red-500 text-white' :
+   903→   903→                          'bg-guinea-gold text-white'
+   904→   904→                        }`}>
+   905→   905→                          {isCompleted ? <Check className="h-4 w-4" /> : <StepIcon className="h-4 w-4" />}
+   906→   906→                        </div>
+   907→   907→                        {idx < (activeReservation.planningSteps?.length ?? 0) - 1 && (
+   908→   908→                          <div className={`w-0.5 h-6 ${isCompleted ? 'bg-emerald-300' : 'bg-muted'}`} />
+   909→   909→                        )}
+   910→   910→                      </div>
+   911→   911→                      <div className="flex-1 min-w-0">
+   912→   912→                        <div className="flex items-center justify-between">
+   913→   913→                          <span className={`text-sm font-medium ${isCompleted ? 'text-emerald-700 line-through' : isOverdue ? 'text-red-700' : ''}`}>
+   914→   914→                            {step.label}
+   915→   915→                          </span>
+   916→   916→                          <div className="flex items-center gap-1">
+   917→   917→                            {isCompleted && <Badge className="text-[9px] bg-emerald-500">Fait</Badge>}
+   918→   918→                            {isOverdue && <Badge className="text-[9px] bg-red-500">En retard</Badge>}
+   919→   919→                            {isPending && !isOverdue && <Badge className="text-[9px] bg-amber-500">En attente</Badge>}
+   920→   920→                          </div>
+   921→   921→                        </div>
+   922→   922→                        {step.scheduledAt && (
+   923→   923→                          <p className="text-xs text-muted-foreground mt-0.5">
+   924→   924→                            <Clock className="h-3 w-3 inline mr-1" />
+   925→   925→                            Prévu: {formatDateTime(step.scheduledAt)}
+   926→   926→                          </p>
+   927→   927→                        )}
+   928→   928→                        {step.completedAt && (
+   929→   929→                          <p className="text-xs text-emerald-600 mt-0.5">
+   930→   930→                            <CheckCircle2 className="h-3 w-3 inline mr-1" />
+   931→   931→                            Complété: {formatDateTime(step.completedAt)}
+   932→   932→                          </p>
+   933→   933→                        )}
+   934→   934→                        {!isCompleted && (
+   935→   935→                          <div className="flex gap-1 mt-2">
+   936→   936→                            <Button size="sm" variant="outline" className="h-6 text-[10px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200"
+   937→   937→                              disabled={updatingStep === step.id}
+   938→   938→                              onClick={() => handleUpdateStep(step.id, 'completed')}>
+   939→   939→                              {updatingStep === step.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
+   940→   940→                              Terminer
+   941→   941→                            </Button>
+   942→   942→                            <Button size="sm" variant="outline" className="h-6 text-[10px]" 
+   943→   943→                              disabled={updatingStep === step.id}
+   944→   944→                              onClick={() => handleUpdateStep(step.id, 'skipped')}>
+   945→   945→                              Ignorer
+   946→   946→                            </Button>
+   947→   947→                          </div>
+   948→   948→                        )}
+   949→   949→                      </div>
+   950→   950→                    </div>
+   951→   951→                  )
+   952→   952→                })}
+   953→   953→              </div>
+   954→   954→              <Button variant="outline" className="w-full mt-3" onClick={() => setShowAddStep(true)}>
+   955→   955→                <Plus className="h-4 w-4 mr-2" /> Ajouter une étape
+   956→   956→              </Button>
+   957→   957→            </>
+   958→   958→          )}
+   959→   959→        </DialogContent>
+   960→   960→      </Dialog>
+   961→   961→
+   962→   962→      {/* Add Custom Step Dialog */}
+   963→   963→      <Dialog open={showAddStep} onOpenChange={setShowAddStep}>
+   964→   964→        <DialogContent className="max-w-sm">
+   965→   965→          <DialogHeader>
+   966→   966→            <DialogTitle className="text-sm">Ajouter une étape de planning</DialogTitle>
+   967→   967→          </DialogHeader>
+   968→   968→          <div className="space-y-3">
+   969→   969→            <div><Label className="text-xs">Identifiant</Label><Input className="mt-1 text-sm" value={newStep.step} onChange={(e) => setNewStep(p => ({ ...p, step: e.target.value }))} placeholder="ex: transport" /></div>
+   970→   970→            <div><Label className="text-xs">Libellé</Label><Input className="mt-1 text-sm" value={newStep.label} onChange={(e) => setNewStep(p => ({ ...p, label: e.target.value }))} placeholder="ex: Organisation transport" /></div>
+   971→   971→          </div>
+   972→   972→          <DialogFooter>
+   973→   973→            <Button variant="outline" onClick={() => setShowAddStep(false)}>Annuler</Button>
+   974→   974→            <Button className="bg-guinea-green hover:bg-guinea-green-light" onClick={handleAddStep} disabled={!newStep.step || !newStep.label}>Ajouter</Button>
+   975→   975→          </DialogFooter>
+   976→   976→        </DialogContent>
+   977→   977→      </Dialog>
+   978→   978→
+   979→   979→      {/* Floating mobile reservations button */}
+   980→   980→      <div className="fixed bottom-16 right-4 md:hidden z-50">
+   981→   981→        <Button
+   982→   982→          className="rounded-full h-12 w-12 shadow-lg bg-guinea-gold hover:bg-guinea-gold-light text-black"
+   983→   983→          onClick={() => setShowReservations(true)}
+   984→   984→        >
+   985→   985→          <ClipboardList className="h-5 w-5" />
+   986→   986→        </Button>
+   987→   987→      </div>
+   988→   988→    </div>
+   989→   989→  )
+   990→   990→}
+   991→   991→
+   992→   992→// ============================================================================
+   993→   993→// DASHBOARD PAGE
+   994→   994→// ============================================================================
+   995→   995→
+   996→   996→function DashboardPage({ stats, loading, onNavigate }: {
+   997→   997→  stats: Stats | null
+   998→   998→  loading: boolean
+   999→   999→  onNavigate: (p: PageType) => void
+
+[showing lines 500-999 of 2002; use offset=1000 with limit to continue reading]
