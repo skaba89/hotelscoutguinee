@@ -49,19 +49,46 @@ export function isEncrypted(value: string): boolean {
 
 // ─── SSRF Protection ───────────────────────────────────────────────
 
-const BLOCKED_HOSTS = [
-  '169.254.169.254',  // AWS/GCP metadata
+const BLOCKED_HOSTNAMES = [
+  '169.254.169.254',       // AWS/GCP metadata endpoint
   'metadata.google.internal',
   'localhost',
-  '127.0.0.1',
   '0.0.0.0',
   '::1',
-  '10.0.0.0',
-  '172.16.0.0',
-  '192.168.0.0',
 ];
 
+const BLOCKED_TLDS = ['.local', '.internal', '.localhost'];
+
 const ALLOWED_SCHEMES = ['http:', 'https:'];
+
+/**
+ * Check if an IPv4 address falls within a private/reserved CIDR range.
+ * Covers: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8, 169.254.0.0/16
+ */
+export function isPrivateIP(ip: string): boolean {
+  const parts = ip.split('.');
+  if (parts.length !== 4) return false;
+
+  const octets = parts.map(Number);
+  if (octets.some(o => isNaN(o) || o < 0 || o > 255)) return false;
+
+  const [a, b] = octets;
+
+  // 10.0.0.0/8
+  if (a === 10) return true;
+  // 172.16.0.0/12  (172.16.x.x – 172.31.x.x)
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  // 192.168.0.0/16
+  if (a === 192 && b === 168) return true;
+  // 127.0.0.0/8
+  if (a === 127) return true;
+  // 169.254.0.0/16  (link-local / cloud metadata)
+  if (a === 169 && b === 254) return true;
+  // 0.0.0.0/8
+  if (a === 0) return true;
+
+  return false;
+}
 
 export function validateUrl(url: string): { valid: boolean; reason?: string } {
   try {
@@ -72,17 +99,27 @@ export function validateUrl(url: string): { valid: boolean; reason?: string } {
       return { valid: false, reason: `Scheme not allowed: ${parsed.protocol}` };
     }
 
-    // Block internal IPs
     const hostname = parsed.hostname.toLowerCase();
-    for (const blocked of BLOCKED_HOSTS) {
-      if (hostname === blocked || hostname.startsWith(blocked)) {
+
+    // Block well-known internal hostnames
+    for (const blocked of BLOCKED_HOSTNAMES) {
+      if (hostname === blocked) {
         return { valid: false, reason: `Blocked internal host: ${hostname}` };
       }
     }
 
-    // Block .local, .internal, .localhost TLDs
-    if (hostname.endsWith('.local') || hostname.endsWith('.internal') || hostname.endsWith('.localhost')) {
-      return { valid: false, reason: `Blocked internal TLD: ${hostname}` };
+    // Block internal TLDs
+    for (const tld of BLOCKED_TLDS) {
+      if (hostname === tld.slice(1) || hostname.endsWith(tld)) {
+        return { valid: false, reason: `Blocked internal TLD: ${hostname}` };
+      }
+    }
+
+    // Check if the hostname is a raw IP in a private range
+    if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
+      if (isPrivateIP(hostname)) {
+        return { valid: false, reason: `Blocked private IP: ${hostname}` };
+      }
     }
 
     return { valid: true };

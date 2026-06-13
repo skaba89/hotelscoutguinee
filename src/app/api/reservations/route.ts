@@ -1,27 +1,43 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { safeParseInt } from '@/lib/security'
 
-// GET /api/reservations — List reservations with optional filters
+// GET /api/reservations — List reservations with optional filters & pagination
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const hotelId = searchParams.get('hotelId')
+    const page = safeParseInt(searchParams.get('page'), 1, 1)
+    const limit = safeParseInt(searchParams.get('limit'), 20, 1, 100)
 
     const where: Record<string, unknown> = {}
     if (status) where.status = status
     if (hotelId) where.hotelId = hotelId
 
-    const reservations = await db.reservation.findMany({
-      where,
-      include: {
-        hotel: { select: { id: true, name: true, city: true, region: true, stars: true, phone: true, email: true } },
-        planningSteps: { orderBy: { order: 'asc' } },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+    const [reservations, total] = await Promise.all([
+      db.reservation.findMany({
+        where,
+        include: {
+          hotel: { select: { id: true, name: true, city: true, region: true, stars: true, phone: true, email: true } },
+          planningSteps: { orderBy: { order: 'asc' } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      db.reservation.count({ where }),
+    ])
 
-    return NextResponse.json({ reservations })
+    return NextResponse.json({
+      reservations,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    })
   } catch (error) {
     console.error('[GET /api/reservations]', error)
     return NextResponse.json({ error: 'Failed to fetch reservations' }, { status: 500 })

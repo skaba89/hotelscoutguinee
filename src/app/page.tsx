@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, Component, ReactNode } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -2856,10 +2856,74 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
 }
 
 // ============================================================================
+// ERROR BOUNDARY — Prevents the entire app from crashing on runtime errors
+// ============================================================================
+
+interface ErrorBoundaryProps {
+  children: ReactNode
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean
+  error: Error | null
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('[ErrorBoundary] Caught runtime error:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background p-6">
+          <Card className="max-w-md w-full">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <CardTitle className="text-lg">Something went wrong</CardTitle>
+              <CardDescription>
+                An unexpected error occurred. Try refreshing the page.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {this.state.error && (
+                <pre className="text-xs bg-muted p-3 rounded-md overflow-x-auto text-muted-foreground">
+                  {this.state.error.message}
+                </pre>
+              )}
+              <Button
+                className="w-full"
+                onClick={() => this.setState({ hasError: false, error: null })}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
+
+// ============================================================================
 // MAIN PAGE COMPONENT
 // ============================================================================
 
-export default function Home() {
+function HomeInner() {
   const [activePage, setActivePage] = useState<PageType>('menu')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -3015,5 +3079,13 @@ export default function Home() {
         </footer>
       </main>
     </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <ErrorBoundary>
+      <HomeInner />
+    </ErrorBoundary>
   )
 }

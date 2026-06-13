@@ -55,11 +55,11 @@ export async function GET() {
 
       db.contact.count(),
 
-      db.hotel.count({ where: { web: { notIn: ['', 'null'] } } }),
+      db.hotel.count({ where: { NOT: [{ web: null }, { web: '' }, { web: 'null' }] } }),
 
-      db.hotel.count({ where: { phone: { not: '' } } }),
+      db.hotel.count({ where: { NOT: [{ phone: null }, { phone: '' }, { phone: 'null' }] } }),
 
-      db.hotel.count({ where: { email: { not: '' } } }),
+      db.hotel.count({ where: { NOT: [{ email: null }, { email: '' }, { email: 'null' }] } }),
 
       db.hotel.groupBy({
         by: ['priority'],

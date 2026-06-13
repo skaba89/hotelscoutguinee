@@ -1,8 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { AI_PROVIDERS, PROVIDER_PRIORITY } from '@/lib/ai-providers';
-import { encryptApiKey, isEncrypted } from '@/lib/security';
+import { encryptApiKey, decryptApiKey, isEncrypted } from '@/lib/security';
 import { checkRateLimit, RATE_LIMITS, getRateLimitHeaders } from '@/lib/rate-limit';
+
+/**
+ * Build a safe hint string for an API key.
+ * When the stored key is encrypted the raw bytes are IV hex — not the real
+ * prefix — so we decrypt first (or fall back to the provider's keyPrefix).
+ */
+function buildKeyHint(storedKey: string, providerKeyPrefix: string): string {
+  if (isEncrypted(storedKey)) {
+    // The stored value is encrypted; show the provider's expected prefix
+    // or, if we can decrypt, show the real prefix.
+    try {
+      const realKey = decryptApiKey(storedKey);
+      if (realKey.length > 8) {
+        return realKey.slice(0, 4) + '••••' + realKey.slice(-4);
+      }
+      return '••••';
+    } catch {
+      // Decryption failed — fall back to the known keyPrefix
+      return providerKeyPrefix ? providerKeyPrefix + '••••' : '••••';
+    }
+  }
+  // Unencrypted legacy key
+  return storedKey.length > 8
+    ? storedKey.slice(0, 4) + '••••' + storedKey.slice(-4)
+    : '••••';
+}
 
 // GET /api/ai/providers — List all providers with configured status
 export async function GET() {
@@ -24,12 +50,7 @@ export async function GET() {
         configured: !!saved,
         isActive: saved?.isActive ?? false,
         lastUsedAt: saved?.lastUsedAt ?? null,
-        // Never expose the full API key to the client
-        keyHint: saved
-          ? saved.apiKey.length > 8
-            ? saved.apiKey.slice(0, 4) + '••••' + saved.apiKey.slice(-4)
-            : '••••'
-          : null,
+        keyHint: saved ? buildKeyHint(saved.apiKey, config.keyPrefix) : null,
       };
     });
 
@@ -115,9 +136,7 @@ export async function POST(request: NextRequest) {
         name: saved.name,
         configured: true,
         isActive: saved.isActive,
-        keyHint: saved.apiKey.length > 8
-          ? saved.apiKey.slice(0, 4) + '••••' + saved.apiKey.slice(-4)
-          : '••••',
+        keyHint: buildKeyHint(saved.apiKey, providerConfig.keyPrefix),
       },
     });
   } catch (error) {

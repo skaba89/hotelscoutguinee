@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { runFullCollection } from '@/lib/automation'
 
 // POST /api/cron/collect — Run the full automated collection cycle
+// @deprecated Use /api/cron/scheduled instead. This endpoint is kept for
+// backward compatibility with existing integrations and will be removed in
+// a future release.
 export async function POST(request: NextRequest) {
   try {
     // Require CRON_SECRET for this endpoint (fixes H1)

@@ -58,7 +58,7 @@ export async function PATCH(request: NextRequest) {
       const allSteps = await db.planningStep.findMany({
         where: { reservationId: existing.reservationId },
       })
-      const allCompleted = allSteps.every(s => s.status === 'completed' || s.id === stepId)
+      const allCompleted = allSteps.every(s => s.status === 'completed')
 
       if (allCompleted) {
         await db.reservation.update({

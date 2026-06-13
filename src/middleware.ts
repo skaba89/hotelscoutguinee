@@ -18,6 +18,8 @@ const PROTECTED_ROUTES = [
   '/api/cron/scheduled',
 ];
 
+const MAX_CONTENT_LENGTH = 1 * 1024 * 1024; // 1MB
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -26,16 +28,36 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Reject oversized request bodies on write methods
+  if (['POST', 'PUT', 'PATCH'].includes(request.method)) {
+    const contentLength = request.headers.get('Content-Length');
+    if (contentLength && parseInt(contentLength, 10) > MAX_CONTENT_LENGTH) {
+      return NextResponse.json(
+        { error: 'Request body exceeds 1MB limit' },
+        { status: 413 }
+      );
+    }
+  }
+
+  // Determine the effective CORS origin
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || '*';
+  const isRestrictedOrigin = allowedOrigin !== '*';
+
   // Handle CORS preflight
   if (request.method === 'OPTIONS') {
+    const preflightHeaders: Record<string, string> = {
+      'Access-Control-Allow-Origin': allowedOrigin,
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, x-cron-secret',
+      'Access-Control-Max-Age': '86400',
+    };
+    if (isRestrictedOrigin) {
+      preflightHeaders['Access-Control-Allow-Credentials'] = 'true';
+      preflightHeaders['Vary'] = 'Origin';
+    }
     return new NextResponse(null, {
       status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, x-cron-secret',
-        'Access-Control-Max-Age': '86400',
-      },
+      headers: preflightHeaders,
     });
   }
 
@@ -55,9 +77,14 @@ export function middleware(request: NextRequest) {
 
   // Add security headers to all API responses
   const response = NextResponse.next();
-  response.headers.set('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || '*');
+  response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type, x-cron-secret');
+
+  if (isRestrictedOrigin) {
+    response.headers.set('Access-Control-Allow-Credentials', 'true');
+    response.headers.set('Vary', 'Origin');
+  }
 
   return response;
 }

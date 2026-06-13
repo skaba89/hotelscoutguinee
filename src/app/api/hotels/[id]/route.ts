@@ -58,6 +58,43 @@ export async function PUT(
       )
     }
 
+    // ── Input validation ──────────────────────────────────────────────
+    const VALID_PRIORITIES = ['hot', 'warm', 'cold']
+    const VALID_PIPELINE_STAGES = ['nouveau', 'contacte', 'interesse', 'proposal', 'client']
+    const VALID_DIGITAL_STATUSES = ['ok', 'partial', 'none']
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    if (body.stars !== undefined) {
+      if (typeof body.stars !== 'number' || body.stars < 0 || body.stars > 5) {
+        return NextResponse.json({ error: 'stars must be a number between 0 and 5' }, { status: 400 })
+      }
+    }
+    if (body.score !== undefined) {
+      if (typeof body.score !== 'number' || body.score < 0 || body.score > 100) {
+        return NextResponse.json({ error: 'score must be a number between 0 and 100' }, { status: 400 })
+      }
+    }
+    if (body.priority !== undefined) {
+      if (!VALID_PRIORITIES.includes(body.priority)) {
+        return NextResponse.json({ error: `priority must be one of: ${VALID_PRIORITIES.join(', ')}` }, { status: 400 })
+      }
+    }
+    if (body.pipelineStage !== undefined) {
+      if (!VALID_PIPELINE_STAGES.includes(body.pipelineStage)) {
+        return NextResponse.json({ error: `pipelineStage must be one of: ${VALID_PIPELINE_STAGES.join(', ')}` }, { status: 400 })
+      }
+    }
+    if (body.statusDigital !== undefined) {
+      if (!VALID_DIGITAL_STATUSES.includes(body.statusDigital)) {
+        return NextResponse.json({ error: `statusDigital must be one of: ${VALID_DIGITAL_STATUSES.join(', ')}` }, { status: 400 })
+      }
+    }
+    if (body.email !== undefined && body.email !== null && body.email !== '') {
+      if (!EMAIL_REGEX.test(body.email)) {
+        return NextResponse.json({ error: 'email format is invalid' }, { status: 400 })
+      }
+    }
+
     // Build update data from provided fields only
     const updateData: Prisma.HotelUpdateInput = {}
 
