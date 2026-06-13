@@ -1,29 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { runFullCollection } from '@/lib/automation'
+import { NextResponse } from 'next/server'
 
-// POST /api/cron/collect — Run the full automated collection cycle
-// @deprecated Use /api/cron/scheduled instead. This endpoint is kept for
-// backward compatibility with existing integrations and will be removed in
-// a future release.
-export async function POST(request: NextRequest) {
-  try {
-    // Require CRON_SECRET for this endpoint (fixes H1)
-    const cronSecret = process.env.CRON_SECRET;
-    const authHeader = request.headers.get('x-cron-secret');
-    if (cronSecret && authHeader !== cronSecret) {
-      return NextResponse.json(
-        { error: 'Unauthorized: invalid or missing x-cron-secret header' },
-        { status: 401 }
-      );
-    }
+// POST /api/cron/collect — DEPRECATED
+// This endpoint has been removed. Use /api/cron/scheduled instead.
+// Returns 410 Gone to indicate the resource is no longer available.
+export async function POST() {
+  return NextResponse.json(
+    {
+      error: 'This endpoint is deprecated and no longer available.',
+      message: 'Please use POST /api/cron/scheduled instead.',
+      migration: 'Replace any calls to /api/cron/collect with /api/cron/scheduled. The x-cron-secret header is still required.',
+    },
+    { status: 410 }
+  )
+}
 
-    const result = await runFullCollection()
-    return NextResponse.json(result)
-  } catch (error) {
-    console.error('[Cron Collect POST] Error:', error)
-    return NextResponse.json(
-      { error: 'Data collection failed' },
-      { status: 500 }
-    )
-  }
+// Also return 410 for any other methods
+export async function GET() {
+  return NextResponse.json(
+    {
+      error: 'This endpoint is deprecated and no longer available.',
+      message: 'Please use POST /api/cron/scheduled instead.',
+    },
+    { status: 410 }
+  )
 }

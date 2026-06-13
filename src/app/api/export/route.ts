@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { safeParseInt } from '@/lib/security'
 
-// GET /api/export — Export hotels as CSV with BOM for Excel UTF-8 compatibility (fixes L3)
+// GET /api/export — Export hotels as streaming CSV with BOM for Excel UTF-8 compatibility
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -41,12 +41,9 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    // Limit results for safety (fixes H9 — memory)
-    const hotels = await db.hotel.findMany({
-      where,
-      orderBy: { name: 'asc' },
-      take: 5000,
-    })
+    // Use cursor-based pagination to stream in batches (memory-efficient)
+    const BATCH_SIZE = 500
+    const MAX_TOTAL = 10000
 
     // Define CSV columns matching the Hotel model
     const columns = [
@@ -62,24 +59,6 @@ export async function GET(request: NextRequest) {
       'createdAt', 'updatedAt',
     ] as const
 
-    // Build CSV rows with BOM for Excel UTF-8 (fixes L3)
-    const headerRow = columns.join(',')
-    const dataRows = hotels.map((hotel) => {
-      return columns.map((col) => {
-        const value = hotel[col as keyof typeof hotel]
-
-        if (value === null || value === undefined) return ''
-        if (value instanceof Date) return escapeCsvField(value.toISOString())
-        if (typeof value === 'boolean') return value ? 'true' : 'false'
-        if (typeof value === 'number') return String(value)
-
-        return escapeCsvField(String(value))
-      }).join(',')
-    })
-
-    // UTF-8 BOM prefix for Excel compatibility
-    const csv = '\uFEFF' + [headerRow, ...dataRows].join('\n')
-
     const timestamp = new Date().toISOString().slice(0, 10)
     const filterParts: string[] = []
     if (city) filterParts.push(`city-${city}`)
@@ -88,7 +67,63 @@ export async function GET(request: NextRequest) {
     const filterSuffix = filterParts.length > 0 ? `_${filterParts.join('_')}` : ''
     const filename = `hotels-guinea${filterSuffix}_${timestamp}.csv`
 
-    return new NextResponse(csv, {
+    // Create a ReadableStream that yields CSV data in batches
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder()
+
+        // UTF-8 BOM prefix for Excel compatibility
+        controller.enqueue(encoder.encode('\uFEFF'))
+
+        // Header row
+        controller.enqueue(encoder.encode(columns.join(',') + '\n'))
+
+        let cursor: string | undefined = undefined
+        let totalExported = 0
+
+        try {
+          while (totalExported < MAX_TOTAL) {
+            const hotels = await db.hotel.findMany({
+              where,
+              orderBy: { name: 'asc' },
+              take: BATCH_SIZE,
+              ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+            })
+
+            if (hotels.length === 0) break
+
+            for (const hotel of hotels) {
+              const row = columns.map((col) => {
+                const value = hotel[col as keyof typeof hotel]
+
+                if (value === null || value === undefined) return ''
+                if (value instanceof Date) return escapeCsvField(value.toISOString())
+                if (typeof value === 'boolean') return value ? 'true' : 'false'
+                if (typeof value === 'number') return String(value)
+
+                return escapeCsvField(String(value))
+              }).join(',')
+
+              controller.enqueue(encoder.encode(row + '\n'))
+            }
+
+            totalExported += hotels.length
+
+            // If we got fewer than BATCH_SIZE, we've reached the end
+            if (hotels.length < BATCH_SIZE) break
+
+            // Set cursor for next batch
+            cursor = hotels[hotels.length - 1].id
+          }
+        } catch (err) {
+          console.error('[GET /api/export] Stream error:', err)
+        } finally {
+          controller.close()
+        }
+      },
+    })
+
+    return new NextResponse(stream, {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',

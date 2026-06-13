@@ -37,7 +37,6 @@ yarn-error.log*
 # vercel
 .vercel
 
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
@@ -49,7 +48,19 @@ dev.log
 dev.out.log
 test
 prompt
-
 server.log
+
 # Skills directory
 /skills/
+
+# ─── Development & Agent Artifacts ─────────────────────────────────────
+# These are build/search/verification artifacts not needed in production.
+/agent-ctx/
+/tool-results/
+/upload/
+verify_*.json
+search_*.json
+search_*.mjs
+guinea_hotels_*.json
+update_hotels.py
+db/*.db

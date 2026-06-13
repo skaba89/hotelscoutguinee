@@ -33,6 +33,9 @@ export async function GET(
 }
 
 // PATCH /api/reservations/[id] — Update reservation status
+const VALID_STATUSES = ['pending', 'confirmed', 'cancelled', 'completed'] as const
+const VALID_ROOM_TYPES = ['standard', 'superior', 'deluxe', 'suite'] as const
+
 export async function PATCH(
   request: NextRequest,
   context: RouteContext
@@ -47,16 +50,53 @@ export async function PATCH(
     }
 
     const updateData: Record<string, unknown> = {}
-    if (body.status) updateData.status = body.status
+
+    // Validate status against allowed values
+    if (body.status) {
+      if (!VALID_STATUSES.includes(body.status)) {
+        return NextResponse.json(
+          { error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` },
+          { status: 400 }
+        )
+      }
+      updateData.status = body.status
+    }
+
     if (body.guestName) updateData.guestName = body.guestName
     if (body.guestEmail !== undefined) updateData.guestEmail = body.guestEmail
     if (body.guestPhone !== undefined) updateData.guestPhone = body.guestPhone
     if (body.checkIn) updateData.checkIn = new Date(body.checkIn)
     if (body.checkOut) updateData.checkOut = new Date(body.checkOut)
-    if (body.guests !== undefined) updateData.guests = body.guests
-    if (body.roomType) updateData.roomType = body.roomType
+    if (body.guests !== undefined) {
+      const guests = Number(body.guests)
+      if (isNaN(guests) || guests < 1 || guests > 50) {
+        return NextResponse.json(
+          { error: 'guests must be a number between 1 and 50' },
+          { status: 400 }
+        )
+      }
+      updateData.guests = guests
+    }
+    if (body.roomType) {
+      if (!VALID_ROOM_TYPES.includes(body.roomType)) {
+        return NextResponse.json(
+          { error: `Invalid roomType. Must be one of: ${VALID_ROOM_TYPES.join(', ')}` },
+          { status: 400 }
+        )
+      }
+      updateData.roomType = body.roomType
+    }
     if (body.specialRequests !== undefined) updateData.specialRequests = body.specialRequests
-    if (body.totalPrice !== undefined) updateData.totalPrice = body.totalPrice
+    if (body.totalPrice !== undefined) {
+      const price = Number(body.totalPrice)
+      if (isNaN(price) || price < 0) {
+        return NextResponse.json(
+          { error: 'totalPrice must be a non-negative number' },
+          { status: 400 }
+        )
+      }
+      updateData.totalPrice = price
+    }
 
     const reservation = await db.reservation.update({
       where: { id },

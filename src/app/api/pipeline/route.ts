@@ -1,11 +1,17 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { safeParseInt } from '@/lib/security'
 
 const PIPELINE_STAGES = ['nouveau', 'contacte', 'interesse', 'proposal', 'client'] as const
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Use groupBy instead of loading all hotels (fixes H8)
+    const { searchParams } = new URL(request.url)
+    const page = safeParseInt(searchParams.get('page'), 1, 1, 1000)
+    const limit = safeParseInt(searchParams.get('limit'), 50, 1, 200)
+    const skip = (page - 1) * limit
+
+    // Use groupBy for counts (efficient, no hotel data loading)
     const [stageCounts, totalHotels] = await Promise.all([
       db.hotel.groupBy({
         by: ['pipelineStage'],
@@ -22,10 +28,16 @@ export async function GET() {
       count: countMap.get(stage) ?? 0,
     }))
 
-    // Only load hotel details if specifically requested (lighter response)
+    // Load hotel details with pagination per stage
     const hotels = await db.hotel.findMany({
-      select: { id: true, name: true, city: true, region: true, stars: true, pipelineStage: true, score: true, priority: true, webVerified: true, statusDigital: true },
+      select: {
+        id: true, name: true, city: true, region: true, stars: true,
+        pipelineStage: true, score: true, priority: true, webVerified: true,
+        statusDigital: true, phone: true, email: true, web: true,
+      },
       orderBy: { updatedAt: 'desc' },
+      skip,
+      take: limit,
     })
 
     const stagesWithHotels = stages.map(s => ({
@@ -33,7 +45,13 @@ export async function GET() {
       hotels: hotels.filter(h => h.pipelineStage === s.stage),
     }))
 
-    return NextResponse.json({ stages: stagesWithHotels, totalHotels })
+    return NextResponse.json({
+      stages: stagesWithHotels,
+      totalHotels,
+      page,
+      limit,
+      hasMore: skip + hotels.length < totalHotels,
+    })
   } catch (error) {
     console.error('[Pipeline GET] Error:', error)
     return NextResponse.json(

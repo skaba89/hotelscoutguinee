@@ -5,7 +5,24 @@ import * as crypto from 'crypto';
 
 // ─── API Key Encryption (AES-256-GCM) ──────────────────────────────
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'hotelscout-guinea-default-key-32b!';
+const DEFAULT_KEY = 'hotelscout-guinea-default-key-32b!';
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || DEFAULT_KEY;
+
+/**
+ * Check if the encryption key is still the insecure default.
+ * Should be called at startup to warn operators.
+ */
+export function isUsingDefaultEncryptionKey(): boolean {
+  return ENCRYPTION_KEY === DEFAULT_KEY;
+}
+
+/**
+ * Get a safe hint about the encryption key (first 4 chars + ***).
+ * Useful for diagnostics without exposing the key.
+ */
+export function getEncryptionKeyHint(): string {
+  return ENCRYPTION_KEY.slice(0, 4) + '***';
+}
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
 const TAG_LENGTH = 16;

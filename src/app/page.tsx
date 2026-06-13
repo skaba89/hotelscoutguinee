@@ -1,7 +1,11 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef, Component, ReactNode } from 'react'
+import { useTheme } from '@/components/theme-provider'
 import { useToast } from '@/hooks/use-toast'
+import type { Hotel, Contact, AIAnalysis, VerificationLog, AIProvider, Stats, PipelineStage, Reservation, PlanningStep, PageType } from '@/lib/types'
+import { PAGE_LABELS, PAGE_ICONS, STAGE_LABELS, STAGE_COLORS, PRIORITY_COLORS, DIGITAL_STATUS_COLORS, DIGITAL_STATUS_LABELS, AI_PROMPT_TEMPLATES, ROOM_TYPE_LABELS, RESERVATION_STATUS_COLORS, RESERVATION_STATUS_LABELS, PLANNING_STEP_ICONS } from '@/lib/constants'
+import { formatNumber, formatDate, formatDateTime, getScoreColor, getScoreBg } from '@/lib/format'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,295 +31,8 @@ import {
   ArrowRight, ArrowUpRight, TrendingUp, Users, Eye, Link2, Wifi,
   WifiOff, Filter, SortAsc, SortDesc, Play, Loader2, X, Check,
   Copy, Sparkles, ChevronDown, Info, Calendar, ShoppingCart, Bed,
-  User, CreditCard, ClipboardList, AlertCircle
+  User, CreditCard, ClipboardList, AlertCircle, Sun, Moon
 } from 'lucide-react'
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-interface Hotel {
-  id: string
-  name: string
-  city: string
-  region: string
-  address: string | null
-  quartier: string | null
-  stars: number
-  phone: string | null
-  email: string | null
-  web: string | null
-  webVerified: boolean
-  webVerifiedAt: string | null
-  webStatus: string | null
-  fb: string | null
-  wa: string | null
-  bookingUrl: string | null
-  tripadvisorUrl: string | null
-  ratingBooking: number
-  reviewsBooking: number
-  ratingTripadvisor: number
-  reviewsTripadvisor: number
-  priceUsd: string | null
-  rooms: number
-  amenities: string | null
-  hasBooking: boolean
-  hasTripadvisor: boolean
-  hasAgoda: boolean
-  hasExpedia: boolean
-  lat: number | null
-  lng: number | null
-  notes: string | null
-  statusDigital: string
-  score: number
-  priority: string
-  source: string | null
-  pipelineStage: string
-  lastContactAt: string | null
-  contactCount: number
-  createdAt: string
-  updatedAt: string
-  _count?: { contacts: number; aiAnalyses: number; verificationLogs: number }
-  contacts?: Contact[]
-  aiAnalyses?: AIAnalysis[]
-  verificationLogs?: VerificationLog[]
-}
-
-interface Contact {
-  id: string
-  hotelId: string
-  channel: string
-  direction: string
-  subject: string | null
-  message: string | null
-  status: string
-  sentAt: string
-  createdAt: string
-  hotel?: { id: string; name: string; city: string; pipelineStage: string }
-}
-
-interface AIAnalysis {
-  id: string
-  hotelId: string
-  providerId: string
-  prompt: string
-  response: string
-  createdAt: string
-}
-
-interface VerificationLog {
-  id: string
-  hotelId: string
-  url: string
-  status: string
-  statusCode: number | null
-  responseMs: number | null
-  error: string | null
-  checkedAt: string
-}
-
-interface AIProvider {
-  id: string
-  name: string
-  free: boolean
-  models: string
-  defaultModel: string
-  keyPrefix: string
-  format: string
-  configured: boolean
-  isActive: boolean
-  lastUsedAt: string | null
-  keyHint: string | null
-}
-
-interface Stats {
-  totalHotels: number
-  byRegion: Record<string, number>
-  byDigitalStatus: Record<string, number>
-  averageScore: number
-  pipelineDistribution: Record<string, number>
-  priorityDistribution: Record<string, number>
-  recentContactsCount: number
-  totalContacts: number
-  digitalReadiness: number
-  hotelsWithWebsite: number
-  hotelsWithPhone: number
-  hotelsWithEmail: number
-  hotelsWithBooking: number
-  hotelsWithTripadvisor: number
-  totalReservations: number
-  pendingReservations: number
-  lastUpdated: string
-}
-
-interface PipelineStage {
-  stage: string
-  label: string
-  count: number
-  hotels: Hotel[]
-}
-
-interface Reservation {
-  id: string
-  hotelId: string
-  checkIn: string
-  checkOut: string
-  guests: number
-  roomType: string
-  specialRequests: string | null
-  guestName: string
-  guestEmail: string | null
-  guestPhone: string | null
-  status: string
-  confirmationCode: string | null
-  nights: number
-  totalPrice: number
-  createdAt: string
-  updatedAt: string
-  hotel?: { id: string; name: string; city: string; region: string; stars: number; phone: string | null; email: string | null }
-  planningSteps?: PlanningStep[]
-}
-
-interface PlanningStep {
-  id: string
-  reservationId: string
-  step: string
-  label: string
-  status: string
-  scheduledAt: string | null
-  completedAt: string | null
-  notes: string | null
-  order: number
-}
-
-type PageType = 'menu' | 'dashboard' | 'hotels' | 'collecte' | 'prospects' | 'pipeline' | 'ia' | 'settings'
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const PAGE_LABELS: Record<PageType, string> = {
-  menu: 'Menu & Réservation',
-  dashboard: 'Tableau de bord',
-  hotels: 'Base Hôtels',
-  collecte: 'Agent de Collecte',
-  prospects: 'Prospects HOT',
-  pipeline: 'Pipeline CRM',
-  ia: 'Analyse IA',
-  settings: 'Paramètres',
-}
-
-const PAGE_ICONS: Record<PageType, React.ElementType> = {
-  menu: ShoppingCart,
-  dashboard: LayoutDashboard,
-  hotels: Building2,
-  collecte: Search,
-  prospects: Flame,
-  pipeline: GitBranch,
-  ia: Brain,
-  settings: Settings,
-}
-
-const STAGE_LABELS: Record<string, string> = {
-  nouveau: 'Nouveau',
-  contacte: 'Contacté',
-  interesse: 'Intéressé',
-  proposal: 'Proposition',
-  client: 'Client',
-}
-
-const STAGE_COLORS: Record<string, string> = {
-  nouveau: 'bg-slate-100 text-slate-700 border-slate-300',
-  contacte: 'bg-blue-50 text-blue-700 border-blue-300',
-  interesse: 'bg-amber-50 text-amber-700 border-amber-300',
-  proposal: 'bg-purple-50 text-purple-700 border-purple-300',
-  client: 'bg-emerald-50 text-emerald-700 border-emerald-300',
-}
-
-const PRIORITY_COLORS: Record<string, string> = {
-  hot: 'bg-red-100 text-red-700 border-red-300',
-  warm: 'bg-amber-100 text-amber-700 border-amber-300',
-  cold: 'bg-slate-100 text-slate-600 border-slate-300',
-}
-
-const DIGITAL_STATUS_COLORS: Record<string, string> = {
-  ok: 'bg-emerald-100 text-emerald-700',
-  partial: 'bg-amber-100 text-amber-700',
-  none: 'bg-red-100 text-red-700',
-}
-
-const DIGITAL_STATUS_LABELS: Record<string, string> = {
-  ok: 'Complet',
-  partial: 'Partiel',
-  none: 'Aucun',
-}
-
-const AI_PROMPT_TEMPLATES = [
-  { id: 'digital', label: 'Analyse digitale', icon: Wifi, prompt: 'Analyse la présence digitale de cet hôtel en Guinée. Évalue son site web, ses plateformes de réservation, et propose des améliorations concrètes pour augmenter sa visibilité en ligne.' },
-  { id: 'prospect', label: 'Message de prospection', icon: Send, prompt: 'Rédige un message de prospection professionnel et personnalisé pour cet hôtel en Guinée, en proposant nos services de création de site web et de présence digitale. Le ton doit être chaleureux mais professionnel.' },
-  { id: 'audit', label: 'Audit concurrentiel', icon: Eye, prompt: 'Réalise un audit concurrentiel pour cet hôtel en Guinée. Compare sa présence digitale avec les standards de l\'industrie hôtelière en Afrique de l\'Ouest et identifie les opportunités d\'amélioration.' },
-]
-
-const ROOM_TYPE_LABELS: Record<string, string> = {
-  standard: 'Standard',
-  superior: 'Supérieure',
-  deluxe: 'Deluxe',
-  suite: 'Suite',
-}
-
-const RESERVATION_STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-amber-100 text-amber-700',
-  confirmed: 'bg-blue-100 text-blue-700',
-  cancelled: 'bg-red-100 text-red-700',
-  completed: 'bg-emerald-100 text-emerald-700',
-}
-
-const RESERVATION_STATUS_LABELS: Record<string, string> = {
-  pending: 'En attente',
-  confirmed: 'Confirmée',
-  cancelled: 'Annulée',
-  completed: 'Terminée',
-}
-
-const PLANNING_STEP_ICONS: Record<string, React.ElementType> = {
-  reservation: ShoppingCart,
-  confirmation: CheckCircle2,
-  payment: CreditCard,
-  checkin_reminder: AlertCircle,
-  checkin: Bed,
-  checkout: Clock,
-  feedback: MessageSquare,
-}
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-function formatNumber(n: number): string {
-  return new Intl.NumberFormat('fr-FR').format(n)
-}
-
-function formatDate(d: string | null | undefined): string {
-  if (!d) return '—'
-  return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(d))
-}
-
-function formatDateTime(d: string | null | undefined): string {
-  if (!d) return '—'
-  return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(d))
-}
-
-function getScoreColor(score: number): string {
-  if (score >= 60) return 'text-emerald-600'
-  if (score >= 30) return 'text-amber-600'
-  return 'text-red-600'
-}
-
-function getScoreBg(score: number): string {
-  if (score >= 60) return 'bg-emerald-500'
-  if (score >= 30) return 'bg-amber-500'
-  return 'bg-red-500'
-}
 
 // ============================================================================
 // SKELETON LOADER COMPONENT
@@ -348,6 +65,44 @@ function TableSkeleton({ rows = 5 }: { rows?: number }) {
         </div>
       ))}
     </div>
+  )
+}
+
+// ============================================================================
+// THEME TOGGLE COMPONENT
+// ============================================================================
+
+function ThemeToggle() {
+  const { theme, setTheme, resolvedTheme } = useTheme()
+
+  const toggleTheme = () => {
+    if (resolvedTheme === 'dark') {
+      setTheme('light')
+    } else {
+      setTheme('dark')
+    }
+  }
+
+  return (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+          >
+            {resolvedTheme === 'dark' ? (
+              <Sun className="h-4 w-4 shrink-0" />
+            ) : (
+              <Moon className="h-4 w-4 shrink-0" />
+            )}
+            <span className="truncate">
+              {resolvedTheme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+            </span>
+          </button>
+        </TooltipTrigger>
+      </Tooltip>
+    </TooltipProvider>
   )
 }
 
@@ -424,6 +179,11 @@ function Sidebar({
           )
         })}
       </nav>
+
+      {/* Dark mode toggle */}
+      <div className="px-2 pb-2">
+        <ThemeToggle />
+      </div>
 
       {/* Footer flag stripe */}
       {!collapsed && (
