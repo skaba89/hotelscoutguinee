@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  // Render sets PORT env var; standalone server reads it automatically
   async headers() {
     return [
       {

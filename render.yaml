@@ -1,0 +1,54 @@
+# HotelScout Guinea v7 — Render Blueprint
+# Déploiement : https://dashboard.render.com/blueprint/new
+#
+# ⚠️ Pour le plan GRATUIT (Starter) :
+#   - Pas de disque persistant → la base SQLite se réinitialise à chaque déploiement
+#   - L'app "sleep" après 15 min d'inactivité (réveil en ~30s)
+#   - 750 heures/mois incluses
+#
+# 💡 Pour la production (recommandé) :
+#   - Utiliser le disque persistant (1GB = $0.25/mois)
+#   - Ou migrer vers PostgreSQL (Render Free PostgreSQL = 90 jours gratuit)
+
+services:
+  - type: web
+    name: hotelscout-guinea
+    runtime: node
+    plan: starter  # "starter" = gratuit, "standard" = $7/mois + disque persistant
+    region: oregon  # ou frankfurt pour l'Europe
+    branch: main
+    repo: https://github.com/skaba89/hotelscoutguinee
+
+    # Build & Start
+    buildCommand: bash render-build.sh
+    startCommand: bash render-start.sh
+
+    # Variables d'environnement
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: file:/opt/render/project/data/hotelscout.db
+      - key: ENCRYPTION_KEY
+        sync: false  # À définir manuellement dans le dashboard Render
+      - key: ADMIN_PASSWORD
+        sync: false  # À définir manuellement dans le dashboard Render
+      - key: CRON_SECRET
+        sync: false  # À définir manuellement dans le dashboard Render
+      - key: ALLOWED_ORIGIN
+        value: "*"
+      - key: PORT
+        value: "10000"
+
+    # Disque persistant (nécessite plan "standard" à $7/mois)
+    # Décommenter pour activer :
+    # disk:
+    #   name: hotelscout-data
+    #   mountPath: /opt/render/project/data
+    #   sizeGB: 1
+
+    # Health check
+    healthCheckPath: /api
+
+    # Auto-deploy on push
+    autoDeploy: true
