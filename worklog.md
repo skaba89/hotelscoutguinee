@@ -93,3 +93,34 @@ Stage Summary:
 - 2 fichiers modifiés : Caddyfile (Docker-compatible), package.json (scripts Docker + prisma seed)
 - Architecture : multi-stage build (~200MB image finale), utilisateur non-root, volume persistant, health check
 - Déploiement : `./docker-helper.sh up` ou `docker compose up -d`
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Implémenter les recommandations restantes de l'audit v7
+
+Work Log:
+- Rec #1: Décomposition monolithe page.tsx → types.ts, constants.ts, format.ts extraits (250+ lignes)
+- Rec #2: Validation complète PATCH /api/reservations/[id] (status, roomType, guests, totalPrice)
+- Rec #3: Endpoint déprécié /api/cron/collect → 410 Gone avec message de migration
+- Rec #4: Error Boundaries React (ErrorBoundary + PageErrorBoundary) ajoutées au layout racine
+- Rec #5: Nettoyage 17 dépendances inutilisées (next-auth, next-intl, zustand, framer-motion, @dnd-kit, etc.)
+- Rec #6: Toggle dark mode (ThemeProvider + bouton sidebar Sun/Moon) avec persistance localStorage
+- Rec #7: Détection clé chiffrement par défaut (isUsingDefaultEncryptionKey) + warning INSECURE dans /api
+- Rec #9: Pagination pipeline GET (page, limit, hasMore) via safeParseInt
+- Rec #10: .gitignore nettoyé (agent-ctx/, tool-results/, upload/, verify_*.json, search_*.json, db/*.db)
+- Rec #11: Framework Vitest installé + 33 tests unitaires passants (security 14, format 11, constants 8)
+- Rec #12: CSV export streaming (ReadableStream + cursor pagination, batches de 500, max 10000)
+- Rec #13: Authentification basique ADMIN_PASSWORD (middleware + /api/auth + Bearer token)
+- Build Next.js réussi (0 erreurs TypeScript)
+- 33/33 tests unitaires passent
+- Commit: ff1c045 "Recommandations audit v7: 12 améliorations majeures"
+
+Stage Summary:
+- 12 recommandations implémentées sur 12
+- 25 fichiers modifiés/créés, +1529 lignes, -1019 lignes
+- Sécurité renforcée: auth admin, validation inputs, clé chiffrement monitoring
+- Qualité code: types/constantes extraits, error boundaries, tests unitaires
+- Performance: CSV streaming, pipeline pagination, 17 dépendances supprimées
+- UX: dark mode toggle, error recovery
+- Git: commit local ff1c045 (pas de remote configuré)
