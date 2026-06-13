@@ -64,18 +64,42 @@ export function middleware(request: NextRequest) {
     });
   }
 
-  // Protect cron routes — require CRON_SECRET if configured
+  // Protect cron routes — require CRON_SECRET or admin Bearer token
   if (CRON_ROUTES.some(route => pathname.startsWith(route))) {
     const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
-      const authHeader = request.headers.get('x-cron-secret');
-      if (authHeader !== cronSecret) {
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    // Check x-cron-secret header first
+    const cronAuthHeader = request.headers.get('x-cron-secret');
+    if (cronSecret && cronAuthHeader === cronSecret) {
+      // Valid CRON_SECRET, allow through
+    } else if (adminPassword) {
+      // Try admin Bearer token as alternative
+      const authHeader = request.headers.get('Authorization');
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return NextResponse.json(
-          { error: 'Unauthorized' },
+          { error: 'Authentication required for cron endpoint. Provide x-cron-secret or Authorization Bearer token.' },
           { status: 401 }
         );
       }
+      try {
+        const token = authHeader.slice(7);
+        const decoded = Buffer.from(token, 'base64').toString('utf-8');
+        const [user, pass] = decoded.split(':');
+        if (user !== 'admin' || pass !== adminPassword) {
+          return NextResponse.json(
+            { error: 'Invalid credentials for cron endpoint' },
+            { status: 403 }
+          );
+        }
+      } catch {
+        return NextResponse.json(
+          { error: 'Invalid authentication token' },
+          { status: 403 }
+        );
+      }
     }
+    // If neither CRON_SECRET nor ADMIN_PASSWORD is set, cron routes are public
   }
 
   // Admin authentication for write operations on protected routes
@@ -107,7 +131,7 @@ export function middleware(request: NextRequest) {
 
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return NextResponse.json(
-          { error: 'Authentication required. Set ADMIN_PASSWORD env var and include Bearer token.' },
+          { error: 'Authentication required', needsAuth: true },
           { status: 401 }
         );
       }

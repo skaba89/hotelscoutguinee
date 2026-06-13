@@ -1,23 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { runFullCollection } from '@/lib/automation'
 
 // POST /api/cron/scheduled — Cron-style automation endpoint
-// Can be called by an external cron service or scheduler to run the
-// full automated collection cycle (search → verify → enrich).
-export async function POST(request: NextRequest) {
+// Can be called by an external cron service (with x-cron-secret header)
+// or by the admin UI (with Bearer token). Auth is handled by middleware.
+export async function POST() {
   try {
-    // Optional: verify a secret header to prevent unauthorized calls
-    const authHeader = request.headers.get('x-cron-secret')
-    const cronSecret = process.env.CRON_SECRET
-
-    // If CRON_SECRET is set in env, require matching header
-    if (cronSecret && authHeader !== cronSecret) {
-      return NextResponse.json(
-        { error: 'Unauthorized: invalid or missing x-cron-secret header' },
-        { status: 401 }
-      )
-    }
-
     console.log('[CRON SCHEDULED] Starting full automated collection cycle...')
 
     const result = await runFullCollection()

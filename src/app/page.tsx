@@ -31,8 +31,52 @@ import {
   ArrowRight, ArrowUpRight, TrendingUp, Users, Eye, Link2, Wifi,
   WifiOff, Filter, SortAsc, SortDesc, Play, Loader2, X, Check,
   Copy, Sparkles, ChevronDown, Info, Calendar, ShoppingCart, Bed,
-  User, CreditCard, ClipboardList, AlertCircle, Sun, Moon
+  User, CreditCard, ClipboardList, AlertCircle, Sun, Moon, LogIn, LogOut, Lock
 } from 'lucide-react'
+
+// ============================================================================
+// AUTH HELPERS — Bearer token management for API authentication
+// ============================================================================
+
+const AUTH_TOKEN_KEY = 'hotelscout_auth_token'
+
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem(AUTH_TOKEN_KEY)
+}
+
+function setAuthToken(token: string | null) {
+  if (typeof window === 'undefined') return
+  if (token) {
+    localStorage.setItem(AUTH_TOKEN_KEY, token)
+  } else {
+    localStorage.removeItem(AUTH_TOKEN_KEY)
+  }
+}
+
+/** Auth-aware fetch: automatically adds Bearer token to API requests */
+async function authFetch(input: string | URL | globalThis.Request, init?: RequestInit): Promise<Response> {
+  const token = getAuthToken()
+  const headers = new Headers(init?.headers)
+
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+
+  // Merge Content-Type if not already set and body is present
+  if (init?.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+
+  const response = await fetch(input, { ...init, headers })
+
+  // If we get a 401, the token is invalid or expired
+  if (response.status === 401 && token) {
+    setAuthToken(null)
+  }
+
+  return response
+}
 
 // ============================================================================
 // SKELETON LOADER COMPONENT
@@ -233,8 +277,8 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
     setLoading(true)
     try {
       const [hotelsRes, statsRes] = await Promise.all([
-        fetch('/api/hotels?limit=200&sortBy=score&sortOrder=desc'),
-        fetch('/api/stats'),
+        authFetch('/api/hotels?limit=200&sortBy=score&sortOrder=desc'),
+        authFetch('/api/stats'),
       ])
       if (hotelsRes.ok) {
         const data = await hotelsRes.json()
@@ -254,7 +298,7 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
 
   const fetchReservations = useCallback(async () => {
     try {
-      const res = await fetch('/api/reservations')
+      const res = await authFetch('/api/reservations')
       if (res.ok) {
         const data = await res.json()
         setReservations(data.reservations)
@@ -287,7 +331,7 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
     }
     setCreating(true)
     try {
-      const res = await fetch('/api/reservations', {
+      const res = await authFetch('/api/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -317,7 +361,7 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
   const handleUpdateStep = async (stepId: string, status: string) => {
     setUpdatingStep(stepId)
     try {
-      const res = await fetch('/api/planning', {
+      const res = await authFetch('/api/planning', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stepId, status }),
@@ -344,7 +388,7 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
   const handleAddStep = async () => {
     if (!activeReservation || !newStep.step || !newStep.label) return
     try {
-      const res = await fetch('/api/planning', {
+      const res = await authFetch('/api/planning', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reservationId: activeReservation.id, step: newStep.step, label: newStep.label }),
@@ -1027,7 +1071,7 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
 
   // Fetch available regions from stats
   useEffect(() => {
-    fetch('/api/stats')
+    authFetch('/api/stats')
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.byRegion) {
@@ -1585,7 +1629,7 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
     setCollecting(true)
     setResults(null)
     try {
-      const res = await fetch('/api/cron/collect', { method: 'POST' })
+      const res = await authFetch('/api/cron/scheduled', { method: 'POST' })
       if (res.ok) {
         const data = await res.json()
         setResults(data)
@@ -1604,7 +1648,7 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
     setVerifying(true)
     setVerifyResults(null)
     try {
-      const res = await fetch('/api/hotels/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verifyAll: true }) })
+      const res = await authFetch('/api/hotels/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verifyAll: true }) })
       if (res.ok) {
         const data = await res.json()
         setVerifyResults(data)
@@ -1621,7 +1665,7 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
     setEnriching(true)
     setEnrichResults(null)
     try {
-      const res = await fetch('/api/hotels/enrich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enrichAllMissing: true }) })
+      const res = await authFetch('/api/hotels/enrich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enrichAllMissing: true }) })
       if (res.ok) {
         const data = await res.json()
         setEnrichResults(data)
@@ -1639,7 +1683,7 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
     setSearching(true)
     setSearchResults(null)
     try {
-      const res = await fetch('/api/hotels/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: searchQuery }) })
+      const res = await authFetch('/api/hotels/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: searchQuery }) })
       if (res.ok) {
         const data = await res.json()
         setSearchResults(data)
@@ -1809,13 +1853,13 @@ function ProspectsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] 
   const fetchProspects = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/hotels?statusDigital=none&limit=50&sortBy=score&sortOrder=desc')
+      const res = await authFetch('/api/hotels?statusDigital=none&limit=50&sortBy=score&sortOrder=desc')
       if (res.ok) {
         const data = await res.json()
         setHotels(data.hotels)
       }
       // Also fetch partial
-      const res2 = await fetch('/api/hotels?statusDigital=partial&limit=50&sortBy=score&sortOrder=desc')
+      const res2 = await authFetch('/api/hotels?statusDigital=partial&limit=50&sortBy=score&sortOrder=desc')
       if (res2.ok) {
         const data2 = await res2.json()
         setHotels(prev => [...prev, ...data2.hotels].sort((a, b) => b.score - a.score))
@@ -1964,7 +2008,7 @@ function PipelinePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
   const fetchPipeline = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/pipeline')
+      const res = await authFetch('/api/pipeline')
       if (res.ok) {
         const data = await res.json()
         setStages(data.stages)
@@ -1981,7 +2025,7 @@ function PipelinePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
   const moveStage = async (hotelId: string, newStage: string) => {
     setMovingId(hotelId)
     try {
-      const res = await fetch('/api/pipeline', {
+      const res = await authFetch('/api/pipeline', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hotelId, stage: newStage }),
@@ -2108,7 +2152,7 @@ function AnalyseIAPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] 
   const fetchProviders = useCallback(async () => {
     setLoadingProviders(true)
     try {
-      const res = await fetch('/api/ai/providers')
+      const res = await authFetch('/api/ai/providers')
       if (res.ok) {
         const data = await res.json()
         setProviders(data.providers)
@@ -2122,7 +2166,7 @@ function AnalyseIAPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] 
 
   const fetchHotels = useCallback(async () => {
     try {
-      const res = await fetch('/api/hotels?limit=100&sortBy=name&sortOrder=asc')
+      const res = await authFetch('/api/hotels?limit=100&sortBy=name&sortOrder=asc')
       if (res.ok) {
         const data = await res.json()
         setHotels(data.hotels)
@@ -2150,7 +2194,7 @@ function AnalyseIAPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] 
       if (selectedHotelId) body.hotelId = selectedHotelId
       if (selectedProvider) body.preferredProvider = selectedProvider
 
-      const res = await fetch('/api/ai/chat', {
+      const res = await authFetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -2357,7 +2401,7 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
   const fetchProviders = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/ai/providers')
+      const res = await authFetch('/api/ai/providers')
       if (res.ok) {
         const data = await res.json()
         setProviders(data.providers)
@@ -2371,7 +2415,7 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/stats')
+      const res = await authFetch('/api/stats')
       if (res.ok) setStats(await res.json())
     } catch {
       /* ignore */
@@ -2380,7 +2424,7 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
 
   const fetchAgency = useCallback(async () => {
     try {
-      const res = await fetch('/api/agency')
+      const res = await authFetch('/api/agency')
       if (res.ok) {
         const data = await res.json()
         const s = data.settings
@@ -2402,7 +2446,7 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
   const handleSaveAgency = async () => {
     setAgencySaving(true)
     try {
-      const res = await fetch('/api/agency', {
+      const res = await authFetch('/api/agency', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(agency),
@@ -2424,7 +2468,7 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
     if (!key?.trim()) return
     setSaving(providerId)
     try {
-      const res = await fetch('/api/ai/providers', {
+      const res = await authFetch('/api/ai/providers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ providerId, apiKey: key }),
@@ -2594,16 +2638,16 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
                 <CardTitle className="text-sm">Actions de maintenance</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { fetch('/api/hotels/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verifyAll: true }) }); toast({ title: 'Vérification lancée' }) }}>
+                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { authFetch('/api/hotels/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verifyAll: true }) }); toast({ title: 'Vérification lancée' }) }}>
                   <RefreshCw className="h-3.5 w-3.5 mr-2" /> Vérifier toutes les URLs
                 </Button>
-                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { fetch('/api/hotels/enrich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enrichAllMissing: true }) }); toast({ title: 'Enrichissement lancé' }) }}>
+                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { authFetch('/api/hotels/enrich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enrichAllMissing: true }) }); toast({ title: 'Enrichissement lancé' }) }}>
                   <Sparkles className="h-3.5 w-3.5 mr-2" /> Enrichir les données manquantes
                 </Button>
-                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { fetch('/api/cron/collect', { method: 'POST' }); toast({ title: 'Collecte lancée' }) }}>
+                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { authFetch('/api/cron/scheduled', { method: 'POST' }); toast({ title: 'Collecte lancée' }) }}>
                   <Search className="h-3.5 w-3.5 mr-2" /> Lancer la collecte automatique
                 </Button>
-                <Button variant="outline" className="w-full justify-start text-xs" onClick={() => { window.open('/api/export', '_blank'); toast({ title: 'Export lancé' }) }}>
+                <Button variant="outline" className="w-full justify-start text-xs" onClick={async () => { try { const res = await authFetch('/api/export'); if (res.ok) { const blob = await res.blob(); const url = URL.createObjectURL(blob); window.open(url, '_blank'); } else { toast({ title: 'Erreur', description: 'Export non autorisé', variant: 'destructive' }); } } catch { toast({ title: 'Erreur', description: 'Export échoué', variant: 'destructive' }); } }}>
                   <Download className="h-3.5 w-3.5 mr-2" /> Exporter la base en CSV
                 </Button>
               </CardContent>
@@ -2611,6 +2655,80 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
           </div>
         </TabsContent>
       </Tabs>
+    </div>
+  )
+}
+
+// ============================================================================
+// LOGIN MODAL — Authenticates admin user to get Bearer token
+// ============================================================================
+
+function LoginModal({ open, onClose, onLogin }: { open: boolean; onClose: () => void; onLogin: (token: string) => void }) {
+  const [username, setUsername] = useState('admin')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      })
+      const data = await res.json()
+      if (res.ok && data.authenticated) {
+        if (data.token) {
+          setAuthToken(data.token)
+          onLogin(data.token)
+        } else {
+          // No ADMIN_PASSWORD set — auth not required
+          onLogin('__no_auth_required__')
+        }
+        onClose()
+      } else {
+        setError(data.error || 'Identifiants invalides')
+      }
+    } catch {
+      setError('Erreur de connexion au serveur')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <Card className="w-full max-w-sm mx-4">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-guinea-green/10">
+            <Lock className="h-6 w-6 text-guinea-green" />
+          </div>
+          <CardTitle className="text-lg">Connexion Admin</CardTitle>
+          <CardDescription>Entrez vos identifiants pour accéder à l&apos;application</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="login-username">Nom d&apos;utilisateur</Label>
+              <Input id="login-username" value={username} onChange={e => setUsername(e.target.value)} placeholder="admin" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="login-password">Mot de passe</Label>
+              <Input id="login-password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mot de passe admin" />
+            </div>
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            <Button type="submit" className="w-full bg-guinea-green hover:bg-guinea-green-light" disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <LogIn className="h-4 w-4 mr-2" />}
+              {loading ? 'Connexion...' : 'Se connecter'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -2689,13 +2807,52 @@ function HomeInner() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [stats, setStats] = useState<Stats | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [showLogin, setShowLogin] = useState(false)
   const { toast } = useToast()
+
+  // Check for existing auth token on mount
+  useEffect(() => {
+    const token = getAuthToken()
+    if (token) {
+      setIsAuthenticated(true)
+    } else {
+      // Try to see if auth is even required by hitting a protected endpoint
+      fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: '', password: '' }),
+      }).then(res => res.json()).then(data => {
+        if (data.authenticated && !data.token) {
+          // No ADMIN_PASSWORD set — no auth needed
+          setIsAuthenticated(true)
+          setAuthToken('__no_auth_required__')
+        } else {
+          setShowLogin(true)
+        }
+      }).catch(() => {
+        setShowLogin(true)
+      })
+    }
+  }, [])
+
+  const handleLogin = (token: string) => {
+    setIsAuthenticated(true)
+    setShowLogin(false)
+    fetchStats()
+  }
+
+  const handleLogout = () => {
+    setAuthToken(null)
+    setIsAuthenticated(false)
+    setShowLogin(true)
+  }
 
   // Fetch dashboard stats
   const fetchStats = useCallback(async () => {
     setStatsLoading(true)
     try {
-      const res = await fetch('/api/stats')
+      const res = await authFetch('/api/stats')
       if (res.ok) {
         setStats(await res.json())
       }
@@ -2749,8 +2906,35 @@ function HomeInner() {
     }
   }
 
+  // Show login modal if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LoginModal open={showLogin} onClose={() => {}} onLogin={handleLogin} />
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Card className="max-w-md w-full mx-4">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-guinea-green/10">
+                <Building2 className="h-6 w-6 text-guinea-green" />
+              </div>
+              <CardTitle className="text-lg">HotelScout Guinée</CardTitle>
+              <CardDescription>Authentification requise pour accéder à l&apos;application</CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+              <Button className="bg-guinea-green hover:bg-guinea-green-light" onClick={() => setShowLogin(true)}>
+                <LogIn className="h-4 w-4 mr-2" /> Se connecter
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    )
+  }
+
   return (
-    <div className="flex h-screen overflow-hidden">
+    <>
+      <LoginModal open={showLogin} onClose={() => setShowLogin(false)} onLogin={handleLogin} />
+      <div className="flex h-screen overflow-hidden">
       {/* Desktop Sidebar */}
       <div className="hidden md:flex">
         <Sidebar
@@ -2799,6 +2983,18 @@ function HomeInner() {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2">
+            {isAuthenticated && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500" onClick={handleLogout}>
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Déconnexion</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -2839,6 +3035,7 @@ function HomeInner() {
         </footer>
       </main>
     </div>
+    </>
   )
 }
 
