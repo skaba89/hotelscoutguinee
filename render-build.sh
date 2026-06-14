@@ -25,10 +25,10 @@ mkdir -p "$DATA_DIR"
 echo "🗄️ Pushing Prisma schema to database..."
 export DATABASE_URL="file:$DATA_DIR/hotelscout.db"
 npx prisma db push --skip-generate 2>&1 || {
-    echo "⚠️ Prisma db push failed, will retry after build..."
+    echo "⚠️ Prisma db push failed, will retry on start..."
 }
 
-# 5. Seeder la base si elle est vide (using Node.js instead of sqlite3 CLI)
+# 5. Seeder la base si elle est vide (using Node.js with tsx)
 echo "🌱 Checking if database needs seeding..."
 NEEDS_SEED=$(node -e "
 const { PrismaClient } = require('@prisma/client');
@@ -37,13 +37,19 @@ db.hotel.count().then(c => { console.log(c > 0 ? 'no' : 'yes'); db.\$disconnect(
 " 2>/dev/null || echo "yes")
 
 if [ "$NEEDS_SEED" = "yes" ]; then
-    echo "🌱 Database is empty, running seed..."
-    npx prisma db seed 2>&1 || echo "⚠️ Seed failed. Continuing..."
+    echo "🌱 Database is empty, running seed with tsx..."
+    # Install tsx for running TypeScript seed
+    npx tsx prisma/seed.ts 2>&1 || {
+        echo "⚠️ tsx seed failed, trying with npx ts-node..."
+        npx ts-node --compiler-options '{"module":"CommonJS"}' prisma/seed.ts 2>&1 || {
+            echo "⚠️ Seed failed. Will retry on start..."
+        }
+    }
 else
     echo "✅ Database has data. Skipping seed."
 fi
 
-# 6. Build Next.js
+# 6. Build Next.js (with standalone output)
 echo "🏗️ Building Next.js..."
 npm run build
 

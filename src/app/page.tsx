@@ -282,10 +282,11 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
       ])
       if (hotelsRes.ok) {
         const data = await hotelsRes.json()
-        setHotels(data.hotels)
+        setHotels(data.hotels ?? [])
       }
       if (statsRes.ok) {
-        setStats(await statsRes.json())
+        const data = await statsRes.json()
+        setStats(data ?? null)
       }
     } catch {
       toast({ title: 'Erreur', description: 'Impossible de charger les données', variant: 'destructive' })
@@ -301,7 +302,7 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
       const res = await authFetch('/api/reservations')
       if (res.ok) {
         const data = await res.json()
-        setReservations(data.reservations)
+        setReservations(data.reservations ?? [])
       }
     } catch {
       /* ignore */
@@ -341,9 +342,9 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
       })
       if (res.ok) {
         const data = await res.json()
-        toast({ title: 'Réservation créée', description: `Confirmation: ${data.reservation.confirmationCode}` })
+        toast({ title: 'Réservation créée', description: `Confirmation: ${data.reservation?.confirmationCode ?? 'N/A'}` })
         setShowReservation(false)
-        setActiveReservation(data.reservation)
+        setActiveReservation(data.reservation ?? null)
         setShowPlanning(true)
         fetchReservations()
         setReservationForm({ guestName: '', guestEmail: '', guestPhone: '', checkIn: '', checkOut: '', guests: 1, roomType: 'standard', specialRequests: '' })
@@ -373,7 +374,7 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
           const res2 = await fetch(`/api/reservations/${activeReservation.id}`)
           if (res2.ok) {
             const data = await res2.json()
-            setActiveReservation(data.reservation)
+            setActiveReservation(data.reservation ?? null)
           }
         }
         fetchReservations()
@@ -401,7 +402,7 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
         const res2 = await fetch(`/api/reservations/${activeReservation.id}`)
         if (res2.ok) {
           const data = await res2.json()
-          setActiveReservation(data.reservation)
+          setActiveReservation(data.reservation ?? null)
         }
       }
     } catch {
@@ -683,9 +684,9 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
               <div className="mb-3">
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span>Progression</span>
-                  <span className="font-semibold">{activeReservation.planningSteps.filter(s => s.status === 'completed').length}/{activeReservation.planningSteps.length}</span>
+                  <span className="font-semibold">{activeReservation.planningSteps?.filter(s => s.status === 'completed').length ?? 0}/{activeReservation.planningSteps?.length ?? 0}</span>
                 </div>
-                <Progress value={(activeReservation.planningSteps.filter(s => s.status === 'completed').length / activeReservation.planningSteps.length) * 100} className="h-2" />
+                <Progress value={activeReservation.planningSteps?.length ? (activeReservation.planningSteps.filter(s => s.status === 'completed').length / activeReservation.planningSteps.length) * 100 : 0} className="h-2" />
               </div>
               <div className="space-y-2">
                 {activeReservation.planningSteps.map((step, idx) => {
@@ -1074,7 +1075,7 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
     authFetch('/api/stats')
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (data?.byRegion) {
+        if (data?.byRegion && typeof data.byRegion === 'object') {
           setAvailableRegions(Object.keys(data.byRegion).sort())
         }
       })
@@ -1097,9 +1098,9 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
       const res = await fetch(`/api/hotels?${params}`)
       if (res.ok) {
         const data = await res.json()
-        setHotels(data.hotels)
-        setTotalPages(data.pagination.totalPages)
-        setTotal(data.pagination.total)
+        setHotels(data.hotels ?? [])
+        setTotalPages(data.pagination?.totalPages ?? 1)
+        setTotal(data.pagination?.total ?? 0)
       }
     } catch {
       toast({ title: 'Erreur', description: 'Impossible de charger les hôtels', variant: 'destructive' })
@@ -1116,7 +1117,7 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
       const res = await fetch(`/api/hotels/${id}`)
       if (res.ok) {
         const data = await res.json()
-        setHotelDetail(data.hotel)
+        setHotelDetail(data.hotel ?? null)
       }
     } catch {
       toast({ title: 'Erreur', description: 'Impossible de charger les détails', variant: 'destructive' })
@@ -1833,13 +1834,13 @@ function ProspectsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] 
       const res = await authFetch('/api/hotels?statusDigital=none&limit=50&sortBy=score&sortOrder=desc')
       if (res.ok) {
         const data = await res.json()
-        setHotels(data.hotels)
+        setHotels(data.hotels ?? [])
       }
       // Also fetch partial
       const res2 = await authFetch('/api/hotels?statusDigital=partial&limit=50&sortBy=score&sortOrder=desc')
       if (res2.ok) {
         const data2 = await res2.json()
-        setHotels(prev => [...prev, ...data2.hotels].sort((a, b) => b.score - a.score))
+        setHotels(prev => [...prev, ...(data2.hotels ?? [])].sort((a, b) => b.score - a.score))
       }
     } catch {
       toast({ title: 'Erreur', description: 'Impossible de charger les prospects', variant: 'destructive' })
@@ -1988,7 +1989,7 @@ function PipelinePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
       const res = await authFetch('/api/pipeline')
       if (res.ok) {
         const data = await res.json()
-        setStages(data.stages)
+        setStages(data.stages ?? [])
       }
     } catch {
       toast({ title: 'Erreur', description: 'Impossible de charger le pipeline', variant: 'destructive' })
@@ -2132,7 +2133,7 @@ function AnalyseIAPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] 
       const res = await authFetch('/api/ai/providers')
       if (res.ok) {
         const data = await res.json()
-        setProviders(data.providers)
+        setProviders(data.providers ?? [])
       }
     } catch {
       /* ignore */
@@ -2146,7 +2147,7 @@ function AnalyseIAPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] 
       const res = await authFetch('/api/hotels?limit=100&sortBy=name&sortOrder=asc')
       if (res.ok) {
         const data = await res.json()
-        setHotels(data.hotels)
+        setHotels(data.hotels ?? [])
       }
     } catch {
       /* ignore */
@@ -2381,7 +2382,7 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
       const res = await authFetch('/api/ai/providers')
       if (res.ok) {
         const data = await res.json()
-        setProviders(data.providers)
+        setProviders(data.providers ?? [])
       }
     } catch {
       /* ignore */
@@ -2393,7 +2394,10 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
   const fetchStats = useCallback(async () => {
     try {
       const res = await authFetch('/api/stats')
-      if (res.ok) setStats(await res.json())
+      if (res.ok) {
+        const data = await res.json()
+        setStats(data ?? null)
+      }
     } catch {
       /* ignore */
     }
@@ -2406,11 +2410,11 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
         const data = await res.json()
         const s = data.settings
         setAgency({
-          name: s.name ?? '',
-          email: s.email ?? '',
-          phone: s.phone ?? '',
-          website: s.website ?? '',
-          address: s.address ?? '',
+          name: s?.name ?? '',
+          email: s?.email ?? '',
+          phone: s?.phone ?? '',
+          website: s?.website ?? '',
+          address: s?.address ?? '',
         })
       }
     } catch {
@@ -2838,8 +2842,10 @@ function HomeInner() {
       const res = await authFetch('/api/stats')
       if (res.ok) {
         const data = await res.json()
-        setStats(data)
-        setDbError(!!data.dbError)
+        setStats(data ?? null)
+        setDbError(!!data?.dbError)
+      } else {
+        setDbError(true)
       }
     } catch {
       /* ignore */

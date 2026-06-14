@@ -1,5 +1,5 @@
 # HotelScout Guinea v7 — Render Blueprint
-# Déploiement : https://dashboard.render.com/blueprint/new
+# Déploiement : https://dashboard.render.com/bluepoint/new
 #
 # ⚠️ Pour le plan GRATUIT (Starter) :
 #   - Pas de disque persistant → la base SQLite se réinitialise à chaque déploiement
@@ -19,7 +19,7 @@ services:
     branch: main
     repo: https://github.com/skaba89/hotelscoutguinee
 
-    # Build & Start
+    # Build & Start — uses custom shell scripts
     buildCommand: bash render-build.sh
     startCommand: bash render-start.sh
 
@@ -47,7 +47,7 @@ services:
     #   mountPath: /opt/render/project/data
     #   sizeGB: 1
 
-    # Health check
+    # Health check — hits /api which returns DB status
     healthCheckPath: /api
 
     # Auto-deploy on push
