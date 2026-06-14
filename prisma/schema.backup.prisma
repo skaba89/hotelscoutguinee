@@ -1,0 +1,176 @@
+// HotelScout Guinea v7 — Prisma Schema (PostgreSQL / Neon)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Hotel {
+  id              String   @id @default(cuid())
+  name            String
+  city            String
+  region          String
+  address         String?
+  quartier        String?
+  stars           Int      @default(0)
+  phone           String?
+  email           String?
+  web             String?
+  webVerified     Boolean  @default(false)
+  webVerifiedAt   DateTime?
+  webStatus       String?  // "ok" | "down" | "redirect" | "timeout" | null
+  fb              String?
+  wa              String?
+  bookingUrl      String?
+  tripadvisorUrl  String?
+  ratingBooking   Float    @default(0)
+  reviewsBooking  Int      @default(0)
+  ratingTripadvisor Float  @default(0)
+  reviewsTripadvisor Int   @default(0)
+  priceUsd        String?
+  rooms           Int      @default(0)
+  amenities       String?  // JSON string array
+  hasBooking      Boolean  @default(false)
+  hasTripadvisor  Boolean  @default(false)
+  hasAgoda        Boolean  @default(false)
+  hasExpedia      Boolean  @default(false)
+  lat             Float?
+  lng             Float?
+  notes           String?
+  statusDigital   String   @default("none") // "ok" | "partial" | "none"
+  score           Int      @default(0)
+  priority        String   @default("cold") // "hot" | "warm" | "cold"
+  source          String?
+  pipelineStage   String   @default("nouveau") // "nouveau" | "contacte" | "interesse" | "proposal" | "client"
+  lastContactAt   DateTime?
+  contactCount    Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  contacts        Contact[]
+  aiAnalyses      AIAnalysis[]
+  verificationLogs VerificationLog[]
+  reservations    Reservation[]
+}
+
+model AIProvider {
+  id          String   @id @default(cuid())
+  providerId  String   @unique // "groq" | "gemini" | "openrouter" | "glm5" | "deepseek" | "cerebras" | "anthropic"
+  name        String
+  apiKey      String
+  isActive    Boolean  @default(false)
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  hotelId     String
+  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  channel     String   // "email" | "whatsapp" | "phone" | "visit"
+  direction   String   // "outbound" | "inbound"
+  subject     String?
+  message     String?
+  status      String   @default("sent") // "sent" | "delivered" | "replied" | "converted"
+  sentAt      DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([hotelId])
+}
+
+model AIAnalysis {
+  id          String   @id @default(cuid())
+  hotelId     String
+  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  providerId  String   // which AI provider was used
+  prompt      String
+  response    String
+  createdAt   DateTime @default(now())
+
+  @@index([hotelId])
+}
+
+model VerificationLog {
+  id          String   @id @default(cuid())
+  hotelId     String
+  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  url         String
+  status      String   // "ok" | "down" | "redirect" | "timeout" | "error"
+  statusCode  Int?
+  responseMs  Int?
+  error       String?
+  checkedAt   DateTime @default(now())
+
+  @@index([hotelId])
+}
+
+model Reservation {
+  id              String   @id @default(cuid())
+  hotelId         String
+  hotel           Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  checkIn         DateTime
+  checkOut        DateTime
+  guests          Int      @default(1)
+  roomType        String   @default("standard") // "standard" | "superior" | "deluxe" | "suite"
+  specialRequests String?
+  guestName       String
+  guestEmail      String?
+  guestPhone      String?
+  status          String   @default("pending") // "pending" | "confirmed" | "cancelled" | "completed"
+  confirmationCode String? @unique
+  nights          Int      @default(1)
+  totalPrice      Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  planningSteps   PlanningStep[]
+
+  @@index([hotelId])
+  @@index([status])
+}
+
+model PlanningStep {
+  id            String    @id @default(cuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  step          String    // "reservation" | "confirmation" | "payment" | "checkin_reminder" | "checkin" | "checkout" | "feedback" | custom
+  label         String
+  status        String    @default("pending") // "pending" | "in_progress" | "completed" | "skipped"
+  scheduledAt   DateTime?
+  completedAt   DateTime?
+  notes         String?
+  order         Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([reservationId])
+}
+
+model AgencySettings {
+  id          String   @id @default(cuid())
+  name        String   @default("HotelScout Guinea")
+  email       String?
+  phone       String?
+  website     String?
+  address     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CollectionLog {
+  id          String   @id @default(cuid())
+  source      String   // "booking" | "tripadvisor" | "google" | "web_search" | etc.
+  query       String
+  resultsFound Int    @default(0)
+  hotelsAdded Int     @default(0)
+  hotelsUpdated Int   @default(0)
+  status      String   // "success" | "partial" | "failed"
+  error       String?
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+}

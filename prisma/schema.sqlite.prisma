@@ -1,0 +1,122 @@
+// HotelScout Guinea — Prisma Schema (SQLite for local dev)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Hotel {
+  id              String   @id @default(cuid())
+  name            String
+  city            String
+  region          String   @default("Conakry")
+  address         String?
+  quartier        String?
+  stars           Int      @default(0)
+  phone           String?
+  email           String?
+  web             String?
+  webVerified     Boolean  @default(false)
+  webVerifiedAt   DateTime?
+  webStatus       String?
+  fb              String?
+  wa              String?
+  bookingUrl      String?
+  tripadvisorUrl  String?
+  ratingBooking   Float    @default(0)
+  reviewsBooking  Int      @default(0)
+  ratingTripadvisor Float  @default(0)
+  reviewsTripadvisor Int   @default(0)
+  priceUsd        String?
+  rooms           Int      @default(0)
+  amenities       String?
+  hasBooking      Boolean  @default(false)
+  hasTripadvisor  Boolean  @default(false)
+  hasAgoda        Boolean  @default(false)
+  hasExpedia      Boolean  @default(false)
+  lat             Float?
+  lng             Float?
+  notes           String?
+  statusDigital   String   @default("none")
+  score           Int      @default(0)
+  priority        String   @default("cold")
+  source          String?
+  pipelineStage   String   @default("nouveau")
+  lastContactAt   DateTime?
+  contactCount    Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  contacts        Contact[]
+  aiAnalyses      AIAnalysis[]
+  verificationLogs VerificationLog[]
+}
+
+model AIProvider {
+  id          String   @id @default(cuid())
+  providerId  String   @unique
+  name        String
+  apiKey      String
+  isActive    Boolean  @default(false)
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  hotelId     String
+  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  channel     String
+  direction   String
+  subject     String?
+  message     String?
+  status      String   @default("sent")
+  sentAt      DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([hotelId])
+}
+
+model AIAnalysis {
+  id          String   @id @default(cuid())
+  hotelId     String
+  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  providerId  String
+  prompt      String
+  response    String
+  createdAt   DateTime @default(now())
+
+  @@index([hotelId])
+}
+
+model VerificationLog {
+  id          String   @id @default(cuid())
+  hotelId     String
+  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  url         String
+  status      String
+  statusCode  Int?
+  responseMs  Int?
+  error       String?
+  checkedAt   DateTime @default(now())
+
+  @@index([hotelId])
+}
+
+model CollectionLog {
+  id          String   @id @default(cuid())
+  source      String
+  query       String
+  resultsFound Int    @default(0)
+  hotelsAdded Int     @default(0)
+  hotelsUpdated Int   @default(0)
+  status      String
+  error       String?
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+}
