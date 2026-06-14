@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef, Component, ReactNode } from 'react'
 import { useTheme } from '@/components/theme-provider'
 import { useToast } from '@/hooks/use-toast'
-import type { Hotel, Contact, AIAnalysis, VerificationLog, AIProvider, Stats, PipelineStage, Reservation, PlanningStep, PageType } from '@/lib/types'
+import type { Hotel, Contact, AIAnalysis, VerificationLog, AIProvider, Stats, PipelineStage, Reservation, PlanningStep, PageType, AppUser } from '@/lib/types'
 import { PAGE_LABELS, PAGE_ICONS, STAGE_LABELS, STAGE_COLORS, PRIORITY_COLORS, DIGITAL_STATUS_COLORS, DIGITAL_STATUS_LABELS, AI_PROMPT_TEMPLATES, ROOM_TYPE_LABELS, RESERVATION_STATUS_COLORS, RESERVATION_STATUS_LABELS, PLANNING_STEP_ICONS } from '@/lib/constants'
 import { formatNumber, formatDate, formatDateTime, getScoreColor, getScoreBg } from '@/lib/format'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -2375,6 +2375,10 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
   const [stats, setStats] = useState<Stats | null>(null)
   const [agency, setAgency] = useState({ name: '', email: '', phone: '', website: '', address: '' })
   const [agencySaving, setAgencySaving] = useState(false)
+  const [users, setUsers] = useState<AppUser[]>([])
+  const [newUser, setNewUser] = useState({ username: '', password: '', name: '', email: '', role: 'agent' })
+  const [addingUser, setAddingUser] = useState(false)
+  const [showNewUser, setShowNewUser] = useState(false)
 
   const fetchProviders = useCallback(async () => {
     setLoading(true)
@@ -2422,7 +2426,63 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
     }
   }, [])
 
-  useEffect(() => { fetchProviders(); fetchStats(); fetchAgency() }, [fetchProviders, fetchStats, fetchAgency])
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await authFetch('/api/users')
+      if (res.ok) {
+        const data = await res.json()
+        setUsers(data.users ?? [])
+      }
+    } catch {
+      /* ignore - users table may not exist yet */
+    }
+  }, [])
+
+  useEffect(() => { fetchProviders(); fetchStats(); fetchAgency(); fetchUsers() }, [fetchProviders, fetchStats, fetchAgency, fetchUsers])
+
+  const handleAddUser = async () => {
+    if (!newUser.username || !newUser.password || !newUser.name) {
+      toast({ title: 'Champs manquants', description: 'Nom d\'utilisateur, mot de passe et nom sont requis', variant: 'destructive' })
+      return
+    }
+    setAddingUser(true)
+    try {
+      const res = await authFetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser),
+      })
+      if (res.ok) {
+        toast({ title: 'Utilisateur ajouté', description: `${newUser.name} (${newUser.role}) créé avec succès` })
+        setNewUser({ username: '', password: '', name: '', email: '', role: 'agent' })
+        setShowNewUser(false)
+        fetchUsers()
+      } else {
+        const data = await res.json()
+        toast({ title: 'Erreur', description: data.error || 'Impossible de créer l\'utilisateur', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Erreur', description: 'Connexion impossible', variant: 'destructive' })
+    } finally {
+      setAddingUser(false)
+    }
+  }
+
+  const handleToggleUser = async (userId: string, isActive: boolean) => {
+    try {
+      const res = await authFetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !isActive }),
+      })
+      if (res.ok) {
+        toast({ title: isActive ? 'Utilisateur désactivé' : 'Utilisateur réactivé', description: 'Statut mis à jour' })
+        fetchUsers()
+      }
+    } catch {
+      toast({ title: 'Erreur', description: 'Impossible de modifier', variant: 'destructive' })
+    }
+  }
 
   const handleSaveAgency = async () => {
     setAgencySaving(true)
@@ -2487,6 +2547,7 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
         <TabsList>
           <TabsTrigger value="ai"><Brain className="h-4 w-4 mr-1" /> Fournisseurs IA</TabsTrigger>
           <TabsTrigger value="agency"><Building2 className="h-4 w-4 mr-1" /> Agence</TabsTrigger>
+          <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" /> Utilisateurs</TabsTrigger>
           <TabsTrigger value="database"><Settings className="h-4 w-4 mr-1" /> Base de données</TabsTrigger>
         </TabsList>
 
@@ -2585,6 +2646,144 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
                 {agencySaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
                 Sauvegarder
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Users Tab */}
+        <TabsContent value="users" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold">Gestion des utilisateurs</h3>
+              <p className="text-xs text-muted-foreground">{users.length} utilisateur{users.length !== 1 ? 's' : ''} enregistré{users.length !== 1 ? 's' : ''}</p>
+            </div>
+            <Button size="sm" className="bg-guinea-green hover:bg-guinea-green-light" onClick={() => setShowNewUser(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Ajouter un utilisateur
+            </Button>
+          </div>
+
+          {/* New User Form */}
+          {showNewUser && (
+            <Card className="border-guinea-green/30">
+              <CardHeader>
+                <CardTitle className="text-sm">Nouvel utilisateur</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs">Nom d&apos;utilisateur *</Label>
+                    <Input placeholder="ex: agent1" className="mt-1" value={newUser.username} onChange={e => setNewUser(p => ({ ...p, username: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Mot de passe *</Label>
+                    <Input type="password" placeholder="Min. 6 caractères" className="mt-1" value={newUser.password} onChange={e => setNewUser(p => ({ ...p, password: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Nom complet *</Label>
+                    <Input placeholder="ex: Mamadou Bah" className="mt-1" value={newUser.name} onChange={e => setNewUser(p => ({ ...p, name: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Email</Label>
+                    <Input type="email" placeholder="email@exemple.com" className="mt-1" value={newUser.email} onChange={e => setNewUser(p => ({ ...p, email: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Rôle</Label>
+                    <Select value={newUser.role} onValueChange={v => setNewUser(p => ({ ...p, role: v }))}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Administrateur</SelectItem>
+                        <SelectItem value="agent">Agent</SelectItem>
+                        <SelectItem value="viewer">Observateur</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button className="bg-guinea-green hover:bg-guinea-green-light" onClick={handleAddUser} disabled={addingUser}>
+                    {addingUser ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+                    Créer l&apos;utilisateur
+                  </Button>
+                  <Button variant="outline" onClick={() => { setShowNewUser(false); setNewUser({ username: '', password: '', name: '', email: '', role: 'agent' }) }}>Annuler</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Users List */}
+          {users.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Users className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Aucun utilisateur en base de données</p>
+                <p className="text-xs text-muted-foreground mt-1">Utilisez ADMIN_PASSWORD pour le super-admin ou ajoutez des utilisateurs ci-dessus</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Utilisateur</TableHead>
+                      <TableHead className="text-xs">Nom</TableHead>
+                      <TableHead className="text-xs">Rôle</TableHead>
+                      <TableHead className="text-xs">Statut</TableHead>
+                      <TableHead className="text-xs">Dernière connexion</TableHead>
+                      <TableHead className="text-xs">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map(user => (
+                      <TableRow key={user.id}>
+                        <TableCell className="text-xs font-mono">{user.username}</TableCell>
+                        <TableCell className="text-xs">{user.name}</TableCell>
+                        <TableCell>
+                          <Badge className={user.role === 'admin' ? 'bg-guinea-red text-[10px]' : user.role === 'agent' ? 'bg-guinea-green text-[10px]' : 'bg-blue-500 text-[10px]'}>
+                            {user.role === 'admin' ? 'Admin' : user.role === 'agent' ? 'Agent' : 'Observateur'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={user.isActive ? 'default' : 'outline'} className={user.isActive ? 'bg-emerald-500 text-[10px]' : 'text-[10px]'}>
+                            {user.isActive ? 'Actif' : 'Inactif'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Jamais'}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => handleToggleUser(user.id, user.isActive)}>
+                            {user.isActive ? <XCircle className="h-3 w-3 mr-1 text-amber-500" /> : <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-500" />}
+                            {user.isActive ? 'Désactiver' : 'Réactiver'}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Role descriptions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Descriptions des rôles</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 text-xs">
+                <div className="flex items-start gap-3">
+                  <Badge className="bg-guinea-red text-[10px] shrink-0">Admin</Badge>
+                  <span className="text-muted-foreground">Accès complet : gestion des utilisateurs, configuration IA, export, toutes les opérations de lecture et écriture</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Badge className="bg-guinea-green text-[10px] shrink-0">Agent</Badge>
+                  <span className="text-muted-foreground">Opérations courantes : création/modification d&apos;hôtels, réservations, contacts, collecte, prospection</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Badge className="bg-blue-500 text-[10px] shrink-0">Observateur</Badge>
+                  <span className="text-muted-foreground">Lecture seule : consultation des données, tableau de bord, statistiques</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

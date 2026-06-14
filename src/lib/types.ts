@@ -155,3 +155,15 @@ export interface PlanningStep {
 }
 
 export type PageType = 'menu' | 'dashboard' | 'hotels' | 'collecte' | 'prospects' | 'pipeline' | 'ia' | 'settings'
+
+export interface AppUser {
+  id: string
+  username: string
+  name: string
+  email: string | null
+  role: string
+  isActive: boolean
+  lastLoginAt: string | null
+  createdAt: string
+  updatedAt: string
+}

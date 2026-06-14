@@ -1,4 +1,5 @@
 import { db } from '../src/lib/db'
+import { hashPassword } from '../src/lib/auth'
 
 // Only hotels with VERIFIED working websites as of June 2026
 // Sources: Direct web search verification, Booking.com, TripAdvisor, official hotel sites
@@ -611,12 +612,44 @@ const VERIFIED_HOTELS = [
 async function main() {
   console.log('🌱 Seeding HotelScout Guinea v7 database...');
   
-  // Clear existing hotels
+  // Clear existing data
   await db.verificationLog.deleteMany();
   await db.aIAnalysis.deleteMany();
   await db.contact.deleteMany();
+  await db.planningStep.deleteMany();
+  await db.reservation.deleteMany();
   await db.hotel.deleteMany();
+  await db.user.deleteMany();
+  await db.aIProvider.deleteMany();
+  await db.agencySettings.deleteMany();
   
+  // ── Seed default admin user ──
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
+  const hashedPassword = await hashPassword(adminPassword)
+  await db.user.create({
+    data: {
+      username: 'admin',
+      password: hashedPassword,
+      name: 'Administrateur',
+      email: 'admin@hotelscout-gn.com',
+      role: 'admin',
+    },
+  })
+  console.log('✅ Default admin user created (username: admin, password: from ADMIN_PASSWORD env or "admin123")')
+
+  // ── Seed default agency settings ──
+  await db.agencySettings.create({
+    data: {
+      name: 'HotelScout Guinea',
+      email: 'info@hotelscout-gn.com',
+      phone: '+224 620 00 00 00',
+      website: 'https://hotelscout-gn.com',
+      address: 'Conakry, République de Guinée',
+    },
+  })
+  console.log('✅ Default agency settings created')
+  
+  // ── Seed hotels ──
   let added = 0;
   for (const hotel of VERIFIED_HOTELS) {
     await db.hotel.create({ data: hotel });

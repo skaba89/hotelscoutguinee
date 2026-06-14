@@ -112,6 +112,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ── Input validation (same rules as PUT) ──
+    const VALID_PRIORITIES = ['hot', 'warm', 'cold']
+    const VALID_PIPELINE_STAGES = ['nouveau', 'contacte', 'interesse', 'proposal', 'client']
+    const VALID_DIGITAL_STATUSES = ['ok', 'partial', 'none']
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    if (body.stars !== undefined && body.stars !== null) {
+      const stars = Number(body.stars)
+      if (isNaN(stars) || stars < 0 || stars > 5) {
+        return NextResponse.json({ error: 'stars must be between 0 and 5' }, { status: 400 })
+      }
+      body.stars = stars
+    }
+    if (body.score !== undefined && body.score !== null) {
+      const score = Number(body.score)
+      if (isNaN(score) || score < 0 || score > 100) {
+        return NextResponse.json({ error: 'score must be between 0 and 100' }, { status: 400 })
+      }
+      body.score = score
+    }
+    if (body.priority !== undefined && !VALID_PRIORITIES.includes(body.priority)) {
+      return NextResponse.json({ error: `priority must be one of: ${VALID_PRIORITIES.join(', ')}` }, { status: 400 })
+    }
+    if (body.pipelineStage !== undefined && !VALID_PIPELINE_STAGES.includes(body.pipelineStage)) {
+      return NextResponse.json({ error: `pipelineStage must be one of: ${VALID_PIPELINE_STAGES.join(', ')}` }, { status: 400 })
+    }
+    if (body.statusDigital !== undefined && !VALID_DIGITAL_STATUSES.includes(body.statusDigital)) {
+      return NextResponse.json({ error: `statusDigital must be one of: ${VALID_DIGITAL_STATUSES.join(', ')}` }, { status: 400 })
+    }
+    if (body.email !== undefined && body.email !== null && body.email !== '' && !EMAIL_REGEX.test(body.email)) {
+      return NextResponse.json({ error: 'email format is invalid' }, { status: 400 })
+    }
+    if (body.rooms !== undefined && body.rooms !== null) {
+      const rooms = Number(body.rooms)
+      if (isNaN(rooms) || rooms < 0) {
+        return NextResponse.json({ error: 'rooms must be a positive number' }, { status: 400 })
+      }
+      body.rooms = rooms
+    }
+
     const hotel = await db.hotel.create({
       data: {
         name: body.name,
