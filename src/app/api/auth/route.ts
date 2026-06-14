@@ -4,7 +4,12 @@ import { NextRequest, NextResponse } from 'next/server'
 // Returns a base64 token for use in subsequent API requests
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    let body: { username?: string; password?: string }
+    try {
+      body = await request.json()
+    } catch {
+      body = {}
+    }
     const { username, password } = body
 
     const adminPassword = process.env.ADMIN_PASSWORD
@@ -20,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     if (!username || !password) {
       return NextResponse.json(
-        { error: 'Username and password are required' },
+        { error: 'Username and password are required', needsAuth: true },
         { status: 400 }
       )
     }

@@ -28,13 +28,19 @@ npx prisma db push --skip-generate 2>&1 || {
     echo "⚠️ Prisma db push failed, will retry after build..."
 }
 
-# 5. Seeder la base si elle est vide
-HOTEL_COUNT=$(sqlite3 "$DATA_DIR/hotelscout.db" "SELECT COUNT(*) FROM Hotel;" 2>/dev/null || echo "0")
-if [ "$HOTEL_COUNT" = "0" ] || [ -z "$HOTEL_COUNT" ]; then
+# 5. Seeder la base si elle est vide (using Node.js instead of sqlite3 CLI)
+echo "🌱 Checking if database needs seeding..."
+NEEDS_SEED=$(node -e "
+const { PrismaClient } = require('@prisma/client');
+const db = new PrismaClient();
+db.hotel.count().then(c => { console.log(c > 0 ? 'no' : 'yes'); db.\$disconnect(); }).catch(() => { console.log('yes'); db.\$disconnect(); });
+" 2>/dev/null || echo "yes")
+
+if [ "$NEEDS_SEED" = "yes" ]; then
     echo "🌱 Database is empty, running seed..."
     npx prisma db seed 2>&1 || echo "⚠️ Seed failed. Continuing..."
 else
-    echo "✅ Database has $HOTEL_COUNT hotels. Skipping seed."
+    echo "✅ Database has data. Skipping seed."
 fi
 
 # 6. Build Next.js

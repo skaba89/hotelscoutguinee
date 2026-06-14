@@ -2811,17 +2811,20 @@ function HomeInner() {
   const [showLogin, setShowLogin] = useState(false)
   const { toast } = useToast()
 
-  // Check for existing auth token on mount
+  // Check for existing auth token on mount — no blocking API call needed
   useEffect(() => {
     const token = getAuthToken()
     if (token) {
       setIsAuthenticated(true)
-    } else {
-      // Try to see if auth is even required by hitting a protected endpoint
+    }
+    // If no token, try a lightweight probe to see if auth is required
+    // We use fetch('/api/auth') with no body — if ADMIN_PASSWORD is not set,
+    // the server returns { authenticated: true, token: null }
+    if (!token) {
       fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: '', password: '' }),
+        body: JSON.stringify({}),
       }).then(res => res.json()).then(data => {
         if (data.authenticated && !data.token) {
           // No ADMIN_PASSWORD set — no auth needed
@@ -2831,7 +2834,9 @@ function HomeInner() {
           setShowLogin(true)
         }
       }).catch(() => {
-        setShowLogin(true)
+        // Network error — try without auth (might be a public instance)
+        setIsAuthenticated(true)
+        setAuthToken('__no_auth_required__')
       })
     }
   }, [])

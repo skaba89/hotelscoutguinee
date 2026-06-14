@@ -21,20 +21,18 @@ fi
 echo "🔄 Syncing database schema..."
 npx prisma db push --skip-generate 2>&1 || echo "⚠️ Schema sync warning"
 
-# Vérifier si la base a besoin de seeding
-DB_PATH=$(echo "$DATABASE_URL" | sed 's/file://')
-if [ -f "$DB_PATH" ]; then
-    HOTEL_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM Hotel;" 2>/dev/null || echo "0")
-    if [ "$HOTEL_COUNT" = "0" ] || [ -z "$HOTEL_COUNT" ]; then
-        echo "🌱 Database is empty, seeding..."
-        npx prisma db seed 2>&1 || echo "⚠️ Seed warning"
-    else
-        echo "✅ Database ready ($HOTEL_COUNT hotels)"
-    fi
-else
-    echo "🌱 No database file found, seeding..."
-    npx prisma db push --skip-generate 2>&1 || true
+# Vérifier si la base a besoin de seeding (using Node.js instead of sqlite3 CLI)
+NEEDS_SEED=$(node -e "
+const { PrismaClient } = require('@prisma/client');
+const db = new PrismaClient();
+db.hotel.count().then(c => { console.log(c > 0 ? 'no' : 'yes'); db.\$disconnect(); }).catch(() => { console.log('yes'); db.\$disconnect(); });
+" 2>/dev/null || echo "yes")
+
+if [ "$NEEDS_SEED" = "yes" ]; then
+    echo "🌱 Database is empty, seeding..."
     npx prisma db seed 2>&1 || echo "⚠️ Seed warning"
+else
+    echo "✅ Database ready"
 fi
 
 # Démarrer le serveur Next.js standalone

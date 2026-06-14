@@ -442,18 +442,22 @@ export async function enrichHotelData(
   }
 
   // Log the enrichment
-  await db.collectionLog.create({
-    data: {
-      source: 'web_search_enrich',
-      query: `Enrich ${hotel.name} — ${missingFields.join(', ')}`,
-      resultsFound: searchResults.length,
-      hotelsAdded: 0,
-      hotelsUpdated: enrichedFields.length > 0 ? 1 : 0,
-      status: enrichedFields.length > 0 ? 'success' : 'partial',
-      startedAt: new Date(),
-      completedAt: new Date(),
-    },
-  })
+  try {
+    await db.collectionLog.create({
+      data: {
+        source: 'web_search_enrich',
+        query: `Enrich ${hotel.name} — ${missingFields.join(', ')}`,
+        resultsFound: searchResults.length,
+        hotelsAdded: 0,
+        hotelsUpdated: enrichedFields.length > 0 ? 1 : 0,
+        status: enrichedFields.length > 0 ? 'success' : 'partial',
+        startedAt: new Date(),
+        completedAt: new Date(),
+      },
+    })
+  } catch {
+    // CollectionLog table may not exist yet — ignore
+  }
 
   return { enriched: enrichedFields.length > 0, fields: enrichedFields }
 }
@@ -574,18 +578,22 @@ export async function searchAndAddHotels(
   }
 
   // Log the collection
-  await db.collectionLog.create({
-    data: {
-      source: 'web_search',
-      query,
-      resultsFound: searchResults.length,
-      hotelsAdded: added,
-      hotelsUpdated: 0,
-      status: added > 0 ? 'success' : 'partial',
-      startedAt: new Date(),
-      completedAt: new Date(),
-    },
-  })
+  try {
+    await db.collectionLog.create({
+      data: {
+        source: 'web_search',
+        query,
+        resultsFound: searchResults.length,
+        hotelsAdded: added,
+        hotelsUpdated: 0,
+        status: added > 0 ? 'success' : 'partial',
+        startedAt: new Date(),
+        completedAt: new Date(),
+      },
+    })
+  } catch {
+    // CollectionLog table may not exist yet — ignore
+  }
 
   return { found: searchResults.length, added, duplicates }
 }
@@ -667,18 +675,22 @@ export async function runFullCollection(): Promise<{
   }
 
   // Log the full collection cycle
-  await db.collectionLog.create({
-    data: {
-      source: 'full_automation',
-      query: FULL_COLLECTION_QUERIES.join('; '),
-      resultsFound: totalSearched,
-      hotelsAdded: totalAdded,
-      hotelsUpdated: enriched,
-      status: totalAdded > 0 || enriched > 0 ? 'success' : 'partial',
-      startedAt: new Date(),
-      completedAt: new Date(),
-    },
-  })
+  try {
+    await db.collectionLog.create({
+      data: {
+        source: 'full_automation',
+        query: FULL_COLLECTION_QUERIES.join('; '),
+        resultsFound: totalSearched,
+        hotelsAdded: totalAdded,
+        hotelsUpdated: enriched,
+        status: totalAdded > 0 || enriched > 0 ? 'success' : 'partial',
+        startedAt: new Date(),
+        completedAt: new Date(),
+      },
+    })
+  } catch {
+    // CollectionLog table may not exist yet — ignore
+  }
 
   return {
     searched: totalSearched,
