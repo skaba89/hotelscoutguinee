@@ -41,6 +41,7 @@
     "skills",
     "agent-ctx",
     "download",
+    "examples",
     "verify_*.json",
     "search_*.json",
     "update_hotels.py"
