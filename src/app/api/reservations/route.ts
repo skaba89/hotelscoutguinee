@@ -40,7 +40,12 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('[GET /api/reservations]', error)
-    return NextResponse.json({ error: 'Failed to fetch reservations' }, { status: 500 })
+    // Return empty list instead of 500 — allows the UI to render
+    return NextResponse.json({
+      reservations: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+      dbError: true,
+    })
   }
 }
 

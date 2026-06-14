@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ steps })
   } catch (error) {
     console.error('[GET /api/planning]', error)
-    return NextResponse.json({ error: 'Failed to fetch planning steps' }, { status: 500 })
+    return NextResponse.json({ steps: [], dbError: true })
   }
 }
 

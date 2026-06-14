@@ -14,7 +14,7 @@ export async function GET() {
     return NextResponse.json({ settings })
   } catch (error) {
     console.error('[GET /api/agency]', error)
-    return NextResponse.json({ error: 'Failed to fetch agency settings' }, { status: 500 })
+    return NextResponse.json({ settings: { name: '', email: '', phone: '', website: '', address: '' }, dbError: true })
   }
 }
 

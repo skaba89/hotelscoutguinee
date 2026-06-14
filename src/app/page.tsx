@@ -1620,7 +1620,7 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
   const [enriching, setEnriching] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searching, setSearching] = useState(false)
-  const [results, setResults] = useState<{ found: number; added: number; updated: number; errors: number; details: string[] } | null>(null)
+  const [results, setResults] = useState<{ searched: number; added: number; verified: number; enriched: number } | null>(null)
   const [verifyResults, setVerifyResults] = useState<{ verified: number; summary: Record<string, number> } | null>(null)
   const [enrichResults, setEnrichResults] = useState<{ totalProcessed: number; enriched: number; notEnriched: number } | null>(null)
   const [searchResults, setSearchResults] = useState<{ totalResults: number; hotelsAdded: number; hotelsSkipped: number } | null>(null)
@@ -1633,7 +1633,7 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
       if (res.ok) {
         const data = await res.json()
         setResults(data)
-        toast({ title: 'Collecte terminée', description: `${data.added} ajoutés, ${data.updated} mis à jour` })
+        toast({ title: 'Collecte terminée', description: `${data.added ?? 0} ajoutés, ${data.enriched ?? 0} enrichis, ${data.verified ?? 0} vérifiés` })
       } else {
         toast({ title: 'Erreur de collecte', description: 'La collecte automatique a échoué', variant: 'destructive' })
       }
@@ -1717,10 +1717,10 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
             </Button>
             {results && (
               <div className="mt-3 p-3 bg-muted/50 rounded-lg text-xs space-y-1">
-                <div className="flex justify-between"><span className="text-muted-foreground">Résultats trouvés</span><span className="font-semibold">{results.found}</span></div>
-                <div className="flex justify-between"><span className="text-emerald-600">Ajoutés</span><span className="font-semibold text-emerald-600">{results.added}</span></div>
-                <div className="flex justify-between"><span className="text-blue-600">Mis à jour</span><span className="font-semibold text-blue-600">{results.updated}</span></div>
-                <div className="flex justify-between"><span className="text-red-600">Erreurs</span><span className="font-semibold text-red-600">{results.errors}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Recherches web</span><span className="font-semibold">{results.searched ?? 0}</span></div>
+                <div className="flex justify-between"><span className="text-emerald-600">Ajoutés</span><span className="font-semibold text-emerald-600">{results.added ?? 0}</span></div>
+                <div className="flex justify-between"><span className="text-blue-600">Enrichis</span><span className="font-semibold text-blue-600">{results.enriched ?? 0}</span></div>
+                <div className="flex justify-between"><span className="text-amber-600">URLs vérifiées</span><span className="font-semibold text-amber-600">{results.verified ?? 0}</span></div>
               </div>
             )}
           </CardContent>
@@ -1814,29 +1814,6 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
           )}
         </CardContent>
       </Card>
-
-      {/* Collection Log */}
-      {results && results.details.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Info className="h-4 w-4 text-guinea-green" />
-              Journal de collecte
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="max-h-64">
-              <div className="space-y-1">
-                {results.details.map((detail, i) => (
-                  <div key={i} className={`text-xs py-1 px-2 rounded ${detail.startsWith('Error') || detail.startsWith('Search failed') ? 'bg-red-50 text-red-700' : detail.startsWith('Added') ? 'bg-emerald-50 text-emerald-700' : detail.startsWith('Updated') ? 'bg-blue-50 text-blue-700' : 'bg-muted/50'}`}>
-                    {detail}
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }
@@ -2809,6 +2786,7 @@ function HomeInner() {
   const [statsLoading, setStatsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showLogin, setShowLogin] = useState(false)
+  const [dbError, setDbError] = useState(false)
   const { toast } = useToast()
 
   // Check for existing auth token on mount — no blocking API call needed
@@ -2859,7 +2837,9 @@ function HomeInner() {
     try {
       const res = await authFetch('/api/stats')
       if (res.ok) {
-        setStats(await res.json())
+        const data = await res.json()
+        setStats(data)
+        setDbError(!!data.dbError)
       }
     } catch {
       /* ignore */
@@ -2967,6 +2947,13 @@ function HomeInner() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Database Error Banner */}
+        {dbError && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400 shrink-0">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            <span>Base de données indisponible — les données affichées peuvent être vides. Redémarrez le service ou vérifiez la configuration.</span>
+          </div>
+        )}
         {/* Top Bar */}
         <header className="h-14 border-b flex items-center gap-3 px-4 bg-card shrink-0">
           {/* Mobile Menu Button */}

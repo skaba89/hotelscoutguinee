@@ -34,10 +34,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ contacts, total, limit, offset })
   } catch (error) {
     console.error('[Contacts GET] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch contacts' },
-      { status: 500 }
-    )
+    return NextResponse.json({ contacts: [], dbError: true })
   }
 }
 

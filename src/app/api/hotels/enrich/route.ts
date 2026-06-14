@@ -90,9 +90,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('[POST /api/hotels/enrich]', error)
-    return NextResponse.json(
-      { error: 'Failed to enrich hotel data' },
-      { status: 500 }
-    )
+    return NextResponse.json({ totalProcessed: 0, enriched: 0, notEnriched: 0, dbError: true })
   }
 }

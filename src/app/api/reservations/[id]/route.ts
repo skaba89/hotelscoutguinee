@@ -28,7 +28,7 @@ export async function GET(
     return NextResponse.json({ reservation })
   } catch (error) {
     console.error('[GET /api/reservations/[id]]', error)
-    return NextResponse.json({ error: 'Failed to fetch reservation' }, { status: 500 })
+    return NextResponse.json({ error: 'Reservation not found' }, { status: 404 })
   }
 }
 

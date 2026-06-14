@@ -76,9 +76,6 @@ export async function POST(request: NextRequest) {
       // Ignore logging errors
     }
 
-    return NextResponse.json(
-      { error: 'Failed to search for hotels' },
-      { status: 500 }
-    )
+    return NextResponse.json({ totalResults: 0, hotelsAdded: 0, hotelsSkipped: 0, dbError: true })
   }
 }

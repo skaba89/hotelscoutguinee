@@ -1,6 +1,26 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
 
+const EMPTY_STATS = {
+  totalHotels: 0,
+  byRegion: {} as Record<string, number>,
+  byDigitalStatus: {} as Record<string, number>,
+  averageScore: 0,
+  pipelineDistribution: {} as Record<string, number>,
+  priorityDistribution: {} as Record<string, number>,
+  recentContactsCount: 0,
+  totalContacts: 0,
+  digitalReadiness: 0,
+  hotelsWithWebsite: 0,
+  hotelsWithPhone: 0,
+  hotelsWithEmail: 0,
+  hotelsWithBooking: 0,
+  hotelsWithTripadvisor: 0,
+  totalReservations: 0,
+  pendingReservations: 0,
+  lastUpdated: new Date().toISOString(),
+}
+
 export async function GET() {
   try {
     // Run all independent queries in parallel
@@ -129,9 +149,7 @@ export async function GET() {
     })
   } catch (error) {
     console.error('[Stats GET] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch statistics' },
-      { status: 500 }
-    )
+    // Return empty stats instead of 500 — allows the UI to render
+    return NextResponse.json({ ...EMPTY_STATS, dbError: true })
   }
 }

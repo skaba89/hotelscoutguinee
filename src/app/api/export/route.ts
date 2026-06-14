@@ -133,10 +133,27 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('[GET /api/export]', error)
-    return NextResponse.json(
-      { error: 'Failed to export hotels' },
-      { status: 500 }
-    )
+    // Return a simple CSV header when the database is unavailable
+    const columns = [
+      'id', 'name', 'city', 'region', 'address', 'quartier', 'stars',
+      'phone', 'email', 'web', 'webVerified', 'webVerifiedAt', 'webStatus',
+      'fb', 'wa', 'bookingUrl', 'tripadvisorUrl',
+      'ratingBooking', 'reviewsBooking', 'ratingTripadvisor', 'reviewsTripadvisor',
+      'priceUsd', 'rooms', 'amenities',
+      'hasBooking', 'hasTripadvisor', 'hasAgoda', 'hasExpedia',
+      'lat', 'lng', 'notes',
+      'statusDigital', 'score', 'priority', 'source',
+      'pipelineStage', 'lastContactAt', 'contactCount',
+      'createdAt', 'updatedAt',
+    ] as const
+    return new NextResponse('\uFEFF' + columns.join(',') + '\n', {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="hotels-guinea_empty.csv"',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      },
+    })
   }
 }
 

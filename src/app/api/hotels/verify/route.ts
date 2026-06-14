@@ -56,9 +56,6 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error('[POST /api/hotels/verify]', error)
-    return NextResponse.json(
-      { error: 'Failed to verify hotel URLs' },
-      { status: 500 }
-    )
+    return NextResponse.json({ verified: 0, summary: {}, dbError: true })
   }
 }

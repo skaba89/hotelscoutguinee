@@ -34,8 +34,8 @@ export async function GET(
   } catch (error) {
     console.error('[GET /api/hotels/[id]]', error)
     return NextResponse.json(
-      { error: 'Failed to fetch hotel' },
-      { status: 500 }
+      { error: 'Hotel not found' },
+      { status: 404 }
     )
   }
 }

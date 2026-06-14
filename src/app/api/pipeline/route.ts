@@ -54,10 +54,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('[Pipeline GET] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch pipeline data' },
-      { status: 500 }
-    );
+    return NextResponse.json({ stages: [], dbError: true })
   }
 }
 

@@ -57,10 +57,7 @@ export async function GET() {
     return NextResponse.json({ providers });
   } catch (error) {
     console.error('[AI Providers GET] Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch providers' },
-      { status: 500 }
-    );
+    return NextResponse.json({ providers: [], dbError: true });
   }
 }
 

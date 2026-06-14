@@ -90,10 +90,12 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('[GET /api/hotels]', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch hotels' },
-      { status: 500 }
-    )
+    // Return empty list instead of 500 — allows the UI to render
+    return NextResponse.json({
+      hotels: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+      dbError: true,
+    })
   }
 }
 
