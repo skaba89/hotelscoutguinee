@@ -64,3 +64,11 @@ search_*.mjs
 guinea_hotels_*.json
 update_hotels.py
 db/*.db
+*.db
+prisma/dev.db
+prisma/custom.db
+hotelscoutguinee/
+download/
+qa-screenshots/
+mini-services/
+worklog.md
