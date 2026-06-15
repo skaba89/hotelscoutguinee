@@ -73,6 +73,10 @@ async function authFetch(input: string | URL | globalThis.Request, init?: Reques
   // If we get a 401, the token is invalid or expired
   if (response.status === 401 && token) {
     setAuthToken(null)
+    // Dispatch a custom event so the app can show login modal
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('auth:expired'))
+    }
   }
 
   return response
@@ -371,7 +375,7 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
         toast({ title: 'Étape mise à jour', description: status === 'completed' ? 'Étape terminée' : status === 'skipped' ? 'Étape ignorée' : 'Étape en cours' })
         // Refresh the active reservation
         if (activeReservation) {
-          const res2 = await fetch(`/api/reservations/${activeReservation.id}`)
+          const res2 = await authFetch(`/api/reservations/${activeReservation.id}`)
           if (res2.ok) {
             const data = await res2.json()
             setActiveReservation(data.reservation ?? null)
@@ -399,7 +403,7 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
         setShowAddStep(false)
         setNewStep({ step: '', label: '' })
         // Refresh
-        const res2 = await fetch(`/api/reservations/${activeReservation.id}`)
+        const res2 = await authFetch(`/api/reservations/${activeReservation.id}`)
         if (res2.ok) {
           const data = await res2.json()
           setActiveReservation(data.reservation ?? null)
@@ -1095,7 +1099,7 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
       if (statusFilter !== 'all') params.set('statusDigital', statusFilter)
       if (priorityFilter !== 'all') params.set('priority', priorityFilter)
 
-      const res = await fetch(`/api/hotels?${params}`)
+      const res = await authFetch(`/api/hotels?${params}`)
       if (res.ok) {
         const data = await res.json()
         setHotels(data.hotels ?? [])
@@ -1114,7 +1118,7 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
   const fetchHotelDetail = useCallback(async (id: string) => {
     setDetailLoading(true)
     try {
-      const res = await fetch(`/api/hotels/${id}`)
+      const res = await authFetch(`/api/hotels/${id}`)
       if (res.ok) {
         const data = await res.json()
         setHotelDetail(data.hotel ?? null)
@@ -1142,7 +1146,7 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
       if (regionFilter !== 'all') params.set('region', regionFilter)
       if (statusFilter !== 'all') params.set('statusDigital', statusFilter)
       if (priorityFilter !== 'all') params.set('priority', priorityFilter)
-      const res = await fetch(`/api/export?${params}`)
+      const res = await authFetch(`/api/export?${params}`)
       if (res.ok) {
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
@@ -1182,7 +1186,7 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
     if (!editHotel) return
     setEditSaving(true)
     try {
-      const res = await fetch(`/api/hotels/${editHotel.id}`, {
+      const res = await authFetch(`/api/hotels/${editHotel.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm),
@@ -1203,7 +1207,7 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
 
   const handleDeleteHotel = async (id: string) => {
     try {
-      const res = await fetch(`/api/hotels/${id}`, { method: 'DELETE' })
+      const res = await authFetch(`/api/hotels/${id}`, { method: 'DELETE' })
       if (res.ok) {
         toast({ title: 'Supprimé', description: 'Hôtel supprimé avec succès' })
         fetchHotels()
@@ -2531,7 +2535,7 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
 
   const handleDeleteKey = async (providerId: string) => {
     try {
-      const res = await fetch(`/api/ai/providers/${providerId}`, { method: 'DELETE' })
+      const res = await authFetch(`/api/ai/providers/${providerId}`, { method: 'DELETE' })
       if (res.ok) {
         toast({ title: 'Clé supprimée', description: `Clé API ${providerId} retirée` })
         fetchProviders()
@@ -3021,6 +3025,17 @@ function HomeInner() {
       })
     }
   }, [])
+
+  // Listen for auth expiration events from authFetch
+  useEffect(() => {
+    const handleExpired = () => {
+      setIsAuthenticated(false)
+      setShowLogin(true)
+      toast({ title: 'Session expirée', description: 'Veuillez vous reconnecter', variant: 'destructive' })
+    }
+    window.addEventListener('auth:expired', handleExpired)
+    return () => window.removeEventListener('auth:expired', handleExpired)
+  }, [toast])
 
   const handleLogin = (token: string) => {
     setIsAuthenticated(true)

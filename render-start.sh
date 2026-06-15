@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
 # HotelScout Guinea — Render Start Script
-# Exécuté au démarrage de chaque instance Render
+# Exécuté au démarrage de chaque instance Render (Node runtime)
 # ============================================================
 
 echo "🚀 HotelScout Guinea — Starting..."
@@ -49,10 +49,10 @@ if [ -f ".next/standalone/server.js" ]; then
     # Copy Prisma engine files to standalone dir if needed
     cp -r node_modules/.prisma .next/standalone/node_modules/.prisma 2>/dev/null || true
     cp -r node_modules/@prisma .next/standalone/node_modules/@prisma 2>/dev/null || true
-    
+
     # Set DATABASE_URL for the standalone server
     export DATABASE_URL="${DATABASE_URL}"
-    
+
     node .next/standalone/server.js
 else
     echo "Standalone not found, using next start..."

@@ -1,5 +1,5 @@
 # HotelScout Guinea v7 — Render Blueprint
-# Déploiement : https://dashboard.render.com/bluepoint/new
+# Déploiement : https://dashboard.render.com/blueprint/new
 #
 # ⚠️ Pour le plan GRATUIT (Starter) :
 #   - Pas de disque persistant → la base SQLite se réinitialise à chaque déploiement
@@ -19,7 +19,8 @@ services:
     branch: main
     repo: https://github.com/skaba89/hotelscoutguinee
 
-    # Build & Start — uses custom shell scripts
+    # Build & Start — uses custom shell scripts (Node runtime mode)
+    # When Dockerfile is present, Render will use it instead
     buildCommand: bash render-build.sh
     startCommand: bash render-start.sh
 
