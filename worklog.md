@@ -124,3 +124,26 @@ Stage Summary:
 - Performance: CSV streaming, pipeline pagination, 17 dépendances supprimées
 - UX: dark mode toggle, error recovery
 - Git: commit local ff1c045 (pas de remote configuré)
+---
+Task ID: 1
+Agent: Main Agent
+Task: Comprehensive E2E testing and fixes for HotelScout Guinea commercial readiness
+
+Work Log:
+- Analyzed full codebase: Prisma schema, 26 API routes, frontend page.tsx (3200+ lines), Dockerfile, render scripts
+- Fixed Dockerfile: switched from `bun install --frozen-lockfile` to `npm ci` (root cause of Render build failure)
+- Fixed Dockerfile: added tsx installation and seed.ts copy for runtime database seeding
+- Fixed docker-entrypoint.sh: replaced sqlite3-based seed check with Node.js + Prisma Client check, added tsx for seeding
+- Fixed middleware.ts: added `__no_auth_required__` sentinel token validation (was blocking ALL API calls when no ADMIN_PASSWORD set)
+- Fixed page.tsx: replaced 8 raw `fetch()` calls with `authFetch()` — these were causing 401 errors on hotels listing, hotel detail, hotel edit, hotel delete, export, reservation refresh, and AI provider delete
+- Fixed page.tsx: added `auth:expired` custom event dispatch from authFetch on 401 responses
+- Fixed page.tsx: added auth expiration listener in HomeInner component to show login modal when session expires
+- Verified local build succeeds with `npx next build`
+- Pushed all fixes to GitHub (commit 3461488)
+
+Stage Summary:
+- Root cause of build failure: bun.lock out of sync with package.json → switched to npm ci
+- Root cause of user creation failure: middleware rejected `__no_auth_required__` sentinel token; also raw fetch() calls didn't include Bearer token
+- All API routes audited — they have proper validation, error handling, and transactions
+- All frontend pages use authFetch correctly (after fixes)
+- 7 files changed, 59 insertions, 36 deletions
