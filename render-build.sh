@@ -12,7 +12,10 @@ echo "NPM version: $(npm --version)"
 
 # 1. Installer les dépendances
 echo "📦 Installing dependencies..."
-npm install
+npm install 2>&1 || {
+  echo "⚠️ npm install failed, trying with --legacy-peer-deps..."
+  npm install --legacy-peer-deps
+}
 
 # 2. Générer le client Prisma
 echo "🔄 Generating Prisma client..."
@@ -26,7 +29,7 @@ mkdir -p "$DATA_DIR"
 echo "🗄️ Pushing Prisma schema to database..."
 export DATABASE_URL="file:$DATA_DIR/hotelscout.db"
 npx prisma db push --skip-generate 2>&1 || {
-    echo "⚠️ Prisma db push failed, will retry on start..."
+  echo "⚠️ Prisma db push failed, will retry on start..."
 }
 
 # 5. Seeder la base si elle est vide (using Node.js with tsx)

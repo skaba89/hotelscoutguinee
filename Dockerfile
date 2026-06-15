@@ -9,10 +9,17 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json* bun.lock* ./
 
 # Install all dependencies (including devDependencies for build)
-RUN npm ci
+# Use npm for reliability; fall back to bun if available
+RUN if [ -f package-lock.json ]; then \
+      npm ci --ignore-scripts; \
+    elif [ -f bun.lock ]; then \
+      npm install -g bun && bun install --frozen-lockfile; \
+    else \
+      npm install --ignore-scripts; \
+    fi
 
 # ---------- Stage 2: Build ----------
 FROM node:22-alpine AS builder

@@ -12,12 +12,16 @@ export async function POST() {
 
     const result = await runFullCollection()
 
+    const hasErrors = result.errors && result.errors.length > 0
     console.log(
-      `[CRON SCHEDULED] Collection complete: searched=${result.searched}, added=${result.added}, verified=${result.verified}, enriched=${result.enriched}`
+      `[CRON SCHEDULED] Collection ${hasErrors ? 'completed with errors' : 'complete'}: searched=${result.searched}, added=${result.added}, verified=${result.verified}, enriched=${result.enriched}`
     )
+    if (hasErrors) {
+      console.error('[CRON SCHEDULED] Errors:', result.errors)
+    }
 
     return NextResponse.json({
-      success: true,
+      success: !hasErrors || result.added > 0 || result.enriched > 0,
       timestamp: new Date().toISOString(),
       ...result,
     })
@@ -29,6 +33,16 @@ export async function POST() {
         success: false,
         timestamp: new Date().toISOString(),
         error: errorMessage,
+        searched: 0,
+        added: 0,
+        verified: 0,
+        enriched: 0,
+        errors: [errorMessage],
+        phases: {
+          search: { queries: 12, succeeded: 0, failed: 12 },
+          verify: { attempted: false, succeeded: false, error: errorMessage },
+          enrich: { attempted: false, succeeded: false, hotelsFound: 0, error: errorMessage },
+        },
       },
       { status: 500 }
     )

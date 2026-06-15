@@ -620,9 +620,18 @@ export async function runFullCollection(): Promise<{
   added: number
   verified: number
   enriched: number
+  errors: string[]
+  phases: {
+    search: { queries: number; succeeded: number; failed: number }
+    verify: { attempted: boolean; succeeded: boolean; error?: string }
+    enrich: { attempted: boolean; succeeded: boolean; hotelsFound: number; error?: string }
+  }
 }> {
+  const errors: string[] = []
   let totalSearched = 0
   let totalAdded = 0
+  let searchSucceeded = 0
+  let searchFailed = 0
 
   // Phase 1: Search and add new hotels from multiple queries
   for (const query of FULL_COLLECTION_QUERIES) {
@@ -630,22 +639,36 @@ export async function runFullCollection(): Promise<{
       const result = await searchAndAddHotels(query)
       totalSearched += result.found
       totalAdded += result.added
+      searchSucceeded++
     } catch (err) {
+      searchFailed++
+      const msg = err instanceof Error ? err.message : String(err)
+      errors.push(`Search "${query}" failed: ${msg}`)
       console.error(`[AUTOMATION runFullCollection] Search failed for "${query}":`, err)
     }
   }
 
   // Phase 2: Verify all URLs that haven't been checked recently
   let verified = 0
+  let verifyAttempted = true
+  let verifySucceeded = true
+  let verifyError: string | undefined
   try {
     const verifyResult = await verifyAllUrls()
     verified = verifyResult.verified
   } catch (err) {
+    verifySucceeded = false
+    verifyError = err instanceof Error ? err.message : String(err)
+    errors.push(`URL verification failed: ${verifyError}`)
     console.error('[AUTOMATION runFullCollection] URL verification failed:', err)
   }
 
   // Phase 3: Enrich hotels missing data (phone, email, web)
   let enriched = 0
+  let enrichAttempted = true
+  let enrichSucceeded = true
+  let enrichError: string | undefined
+  let hotelsFoundToEnrich = 0
   try {
     const hotelsToEnrich = await db.hotel.findMany({
       where: {
@@ -658,6 +681,7 @@ export async function runFullCollection(): Promise<{
       take: 30, // limit batch to avoid API rate limits
       select: { id: true },
     })
+    hotelsFoundToEnrich = hotelsToEnrich.length
 
     for (const hotel of hotelsToEnrich) {
       try {
@@ -671,6 +695,9 @@ export async function runFullCollection(): Promise<{
       }
     }
   } catch (err) {
+    enrichSucceeded = false
+    enrichError = err instanceof Error ? err.message : String(err)
+    errors.push(`Enrichment failed: ${enrichError}`)
     console.error('[AUTOMATION runFullCollection] Enrichment phase failed:', err)
   }
 
@@ -683,7 +710,8 @@ export async function runFullCollection(): Promise<{
         resultsFound: totalSearched,
         hotelsAdded: totalAdded,
         hotelsUpdated: enriched,
-        status: totalAdded > 0 || enriched > 0 ? 'success' : 'partial',
+        status: errors.length === 0 ? 'success' : (totalAdded > 0 || enriched > 0 ? 'partial' : 'failed'),
+        error: errors.length > 0 ? errors.join('; ') : null,
         startedAt: new Date(),
         completedAt: new Date(),
       },
@@ -697,5 +725,11 @@ export async function runFullCollection(): Promise<{
     added: totalAdded,
     verified,
     enriched,
+    errors,
+    phases: {
+      search: { queries: FULL_COLLECTION_QUERIES.length, succeeded: searchSucceeded, failed: searchFailed },
+      verify: { attempted: verifyAttempted, succeeded: verifySucceeded, error: verifyError },
+      enrich: { attempted: enrichAttempted, succeeded: enrichSucceeded, hotelsFound: hotelsFoundToEnrich, error: enrichError },
+    },
   }
 }
