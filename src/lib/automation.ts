@@ -55,6 +55,45 @@ async function createZAI(): Promise<ZAI> {
 
 // ─── Helper Utilities ──────────────────────────────────────────────
 
+/** Sleep for ms milliseconds */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** Check if an error is a rate-limit (429) error */
+function isRateLimitError(err: unknown): boolean {
+  if (err instanceof Error) {
+    return err.message.includes('429') || err.message.includes('Too many requests')
+  }
+  return false
+}
+
+/**
+ * Retry a function with exponential backoff on rate-limit (429) errors.
+ * - 3 retries max
+ * - Delays: 3s, 6s, 12s
+ */
+async function withRateLimitRetry<T>(fn: () => Promise<T>): Promise<T> {
+  const maxRetries = 3
+  const baseDelay = 3000
+  let lastError: unknown
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastError = err
+      if (isRateLimitError(err) && attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt)
+        console.warn(`[AUTOMATION] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`)
+        await sleep(delay)
+        continue
+      }
+      throw err
+    }
+  }
+  throw lastError
+}
+
 /** Normalize a hotel name for similarity comparison */
 function normalizeName(name: string): string {
   return name
@@ -409,10 +448,12 @@ export async function enrichHotelData(
   const zai = await createZAI()
 
   const searchQuery = `"${hotel.name}" ${hotel.city} Guinea hotel contact information`
-  const searchResults = await zai.functions.invoke('web_search', {
-    query: searchQuery,
-    num: 5,
-  })
+  const searchResults = await withRateLimitRetry(() =>
+    zai.functions.invoke('web_search', {
+      query: searchQuery,
+      num: 5,
+    })
+  )
 
   const enrichedFields: string[] = []
   const updates: Record<string, unknown> = {}
@@ -527,10 +568,12 @@ export async function searchAndAddHotels(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let searchResults: any[]
   try {
-    searchResults = await zai.functions.invoke('web_search', {
-      query,
-      num: 10,
-    })
+    searchResults = await withRateLimitRetry(() =>
+      zai.functions.invoke('web_search', {
+        query,
+        num: 10,
+      })
+    )
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`[AUTOMATION searchAndAddHotels] Search failed for "${query}": ${msg}`)
@@ -670,12 +713,6 @@ const FULL_COLLECTION_QUERIES = [
   'hôtels Guinée Conakry contact',
   'hotels Guinea Kankan',
   'hotels Guinea Kindia',
-  'hôtels Guinée Nzérékoré',
-  'hotels Guinea Boké',
-  'hotels Guinea Labé',
-  'hotels Guinea Mamou',
-  'auberges Guinée Conakry',
-  'résidences hôtelières Guinea',
 ]
 
 export async function runFullCollection(): Promise<{
@@ -699,10 +736,15 @@ export async function runFullCollection(): Promise<{
       if (result.error) {
         errors.push(result.error)
       }
+      // Rate limit: wait 800ms between search calls to avoid 429
+      await sleep(800)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error(`[AUTOMATION runFullCollection] Search failed for "${query}":`, msg)
       errors.push(`Search '${query}' failed: ${msg}`)
+      if (isRateLimitError(err)) {
+        await sleep(5000)
+      }
     }
   }
 
@@ -728,7 +770,7 @@ export async function runFullCollection(): Promise<{
           { web: null },
         ],
       },
-      take: 30, // limit batch to avoid API rate limits
+      take: 10, // limit batch to avoid API rate limits (reduced from 30)
       select: { id: true },
     })
 
@@ -736,13 +778,21 @@ export async function runFullCollection(): Promise<{
       try {
         const result = await enrichHotelData(hotel.id)
         if (result.enriched) enriched++
+        // Rate limit: wait 1.5s between enrichment calls to avoid 429
+        await sleep(1500)
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         console.error(
           `[AUTOMATION runFullCollection] Enrich failed for hotel ${hotel.id}:`,
           msg
         )
-        errors.push(`Enrichment failed for hotel ${hotel.id}: ${msg}`)
+        if (isRateLimitError(err)) {
+          // Back off longer on rate limit errors
+          await sleep(5000)
+          errors.push(`Enrichment rate-limited for hotel ${hotel.id} (will retry next cycle)`)
+        } else {
+          errors.push(`Enrichment failed for hotel ${hotel.id}: ${msg}`)
+        }
       }
     }
   } catch (err) {
