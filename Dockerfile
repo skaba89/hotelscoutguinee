@@ -62,6 +62,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
+# Copy .z-ai-config for ZAI SDK (web search functionality)
+COPY --from=builder --chown=nextjs:nodejs /app/.z-ai-config ./.z-ai-config
+
 # Copy Prisma schema, CLI, engine and generated client for runtime
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma

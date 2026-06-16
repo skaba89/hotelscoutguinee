@@ -39,6 +39,11 @@ services:
         value: "*"
       - key: PORT
         value: "10000"
+      # ZAI SDK fallback (si .z-ai-config n'est pas trouvé)
+      - key: ZAI_BASE_URL
+        value: "https://internal-api.z.ai/v1"
+      - key: ZAI_API_KEY
+        value: "Z.ai"
 
     # Disque persistant (nécessite plan "standard" à $7/mois)
     # Décommenter pour activer :

@@ -9,20 +9,22 @@ import { validateUrl } from '@/lib/security'
 
 /**
  * Create a ZAI SDK instance with robust config-file fallback.
- * Tries ZAI.create() (reads .z-ai-config). If the config file is
- * missing, writes one from environment variables and retries.
+ * Tries ZAI.create() (reads .z-ai-config from cwd, home, /etc).
+ * If the config file is missing, writes one from environment variables
+ * and retries. This handles both local dev and Render/Docker deployments.
  */
 async function createZAI(): Promise<ZAI> {
   try {
     return await ZAI.create()
   } catch {
-    // Config file not found — try writing one from environment variables
+    // Config file not found in standard locations — try env vars
     const baseUrl = process.env.ZAI_BASE_URL
     const apiKey = process.env.ZAI_API_KEY
     if (baseUrl && apiKey) {
       const fs = await import('fs/promises')
       const path = await import('path')
-      const configPath = path.join(process.cwd(), '.z-ai-config')
+      const os = await import('os')
+
       const config = JSON.stringify({
         baseUrl,
         apiKey,
@@ -30,7 +32,19 @@ async function createZAI(): Promise<ZAI> {
         userId: process.env.ZAI_USER_ID || '',
         token: process.env.ZAI_TOKEN || '',
       })
-      await fs.writeFile(configPath, config, 'utf-8')
+
+      // Write to multiple locations to ensure ZAI.create() finds it
+      const writePaths = [
+        path.join(process.cwd(), '.z-ai-config'),
+        path.join(os.homedir(), '.z-ai-config'),
+      ]
+      for (const p of writePaths) {
+        try {
+          await fs.writeFile(p, config, 'utf-8')
+        } catch {
+          // Directory might not be writable — ignore
+        }
+      }
       return await ZAI.create()
     }
     throw new Error(

@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // Routes that allow unauthenticated GET requests
 const PUBLIC_READ_ROUTES = [
   '/api',           // Health check
+  '/api/health',    // Detailed health check
   '/api/stats',     // Public stats
   '/api/hotels',    // Read-only (GET)
   '/api/hotels/cities',

@@ -50,6 +50,12 @@ if [ -f ".next/standalone/server.js" ]; then
     cp -r node_modules/.prisma .next/standalone/node_modules/.prisma 2>/dev/null || true
     cp -r node_modules/@prisma .next/standalone/node_modules/@prisma 2>/dev/null || true
     
+    # Copy .z-ai-config to standalone dir so ZAI SDK can find it
+    if [ -f ".z-ai-config" ]; then
+        cp .z-ai-config .next/standalone/.z-ai-config
+        echo "📋 Copied .z-ai-config to standalone dir"
+    fi
+    
     # Set DATABASE_URL for the standalone server
     export DATABASE_URL="${DATABASE_URL}"
     
