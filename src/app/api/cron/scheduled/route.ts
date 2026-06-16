@@ -17,7 +17,6 @@ export async function POST() {
     )
 
     return NextResponse.json({
-      success: true,
       timestamp: new Date().toISOString(),
       ...result,
     })

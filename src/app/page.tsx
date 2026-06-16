@@ -1621,7 +1621,7 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
   const [enriching, setEnriching] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searching, setSearching] = useState(false)
-  const [results, setResults] = useState<{ searched: number; added: number; verified: number; enriched: number } | null>(null)
+  const [results, setResults] = useState<{ searched: number; added: number; verified: number; enriched: number; errors?: string[]; success?: boolean } | null>(null)
   const [verifyResults, setVerifyResults] = useState<{ verified: number; summary: Record<string, number> } | null>(null)
   const [enrichResults, setEnrichResults] = useState<{ totalProcessed: number; enriched: number; notEnriched: number } | null>(null)
   const [searchResults, setSearchResults] = useState<{ totalResults: number; hotelsAdded: number; hotelsSkipped: number } | null>(null)
@@ -1631,9 +1631,11 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
     setResults(null)
     try {
       const res = await authFetch('/api/cron/scheduled', { method: 'POST' })
-      if (res.ok) {
-        const data = await res.json()
-        setResults(data)
+      const data = await res.json()
+      setResults(data)
+      if (data.success === false && data.errors?.length > 0) {
+        toast({ title: 'Collecte terminée avec erreurs', description: `${data.added ?? 0} ajoutés, ${data.enriched ?? 0} enrichis, ${data.errors.length} erreur(s)`, variant: 'destructive' })
+      } else if (res.ok) {
         toast({ title: 'Collecte terminée', description: `${data.added ?? 0} ajoutés, ${data.enriched ?? 0} enrichis, ${data.verified ?? 0} vérifiés` })
       } else {
         toast({ title: 'Erreur de collecte', description: 'La collecte automatique a échoué', variant: 'destructive' })
@@ -1722,6 +1724,17 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
                 <div className="flex justify-between"><span className="text-emerald-600">Ajoutés</span><span className="font-semibold text-emerald-600">{results.added ?? 0}</span></div>
                 <div className="flex justify-between"><span className="text-blue-600">Enrichis</span><span className="font-semibold text-blue-600">{results.enriched ?? 0}</span></div>
                 <div className="flex justify-between"><span className="text-amber-600">URLs vérifiées</span><span className="font-semibold text-amber-600">{results.verified ?? 0}</span></div>
+                {results.errors && results.errors.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-red-200 dark:border-red-900">
+                    <div className="flex justify-between"><span className="text-red-600 font-semibold">Erreurs</span><span className="font-semibold text-red-600">{results.errors.length}</span></div>
+                    <div className="mt-1 max-h-24 overflow-y-auto space-y-0.5">
+                      {results.errors.slice(0, 5).map((err, i) => (
+                        <p key={i} className="text-red-500 dark:text-red-400 break-words">{err}</p>
+                      ))}
+                      {results.errors.length > 5 && <p className="text-red-400 italic">...et {results.errors.length - 5} autres</p>}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

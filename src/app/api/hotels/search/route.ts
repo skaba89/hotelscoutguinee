@@ -31,7 +31,12 @@ export async function POST(request: NextRequest) {
 
     // If saveResults is false, just return raw search results without saving
     const ZAI = (await import('z-ai-web-dev-sdk')).default
-    const zai = await ZAI.create()
+    let zai
+    try {
+      zai = await ZAI.create()
+    } catch {
+      return NextResponse.json({ error: 'ZAI SDK non configuré' }, { status: 500 })
+    }
     const searchResults = await zai.functions.invoke('web_search', {
       query,
       num: 10,

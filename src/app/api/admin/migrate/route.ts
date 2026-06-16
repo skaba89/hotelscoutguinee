@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     if (action === 'run-collection') {
       const { runFullCollection } = await import('@/lib/automation')
       const result = await runFullCollection()
-      return NextResponse.json({ success: true, action: 'run-collection', ...result })
+      return NextResponse.json({ action: 'run-collection', ...result })
     }
 
     return NextResponse.json({ error: 'Unknown action. Use: check, add-platform-columns, import-curated-hotels, run-collection' }, { status: 400 })

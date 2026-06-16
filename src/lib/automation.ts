@@ -5,6 +5,40 @@ import { db } from '@/lib/db'
 import ZAI from 'z-ai-web-dev-sdk'
 import { validateUrl } from '@/lib/security'
 
+// ─── ZAI SDK Initialization ──────────────────────────────────────────
+
+/**
+ * Create a ZAI SDK instance with robust config-file fallback.
+ * Tries ZAI.create() (reads .z-ai-config). If the config file is
+ * missing, writes one from environment variables and retries.
+ */
+async function createZAI(): Promise<ZAI> {
+  try {
+    return await ZAI.create()
+  } catch {
+    // Config file not found — try writing one from environment variables
+    const baseUrl = process.env.ZAI_BASE_URL
+    const apiKey = process.env.ZAI_API_KEY
+    if (baseUrl && apiKey) {
+      const fs = await import('fs/promises')
+      const path = await import('path')
+      const configPath = path.join(process.cwd(), '.z-ai-config')
+      const config = JSON.stringify({
+        baseUrl,
+        apiKey,
+        chatId: process.env.ZAI_CHAT_ID || '',
+        userId: process.env.ZAI_USER_ID || '',
+        token: process.env.ZAI_TOKEN || '',
+      })
+      await fs.writeFile(configPath, config, 'utf-8')
+      return await ZAI.create()
+    }
+    throw new Error(
+      'ZAI SDK non configuré. Créez .z-ai-config ou définissez ZAI_BASE_URL + ZAI_API_KEY.'
+    )
+  }
+}
+
 // ─── Helper Utilities ──────────────────────────────────────────────
 
 /** Normalize a hotel name for similarity comparison */
@@ -358,7 +392,7 @@ export async function enrichHotelData(
   }
 
   // Initialize ZAI SDK (backend only)
-  const zai = await ZAI.create()
+  const zai = await createZAI()
 
   const searchQuery = `"${hotel.name}" ${hotel.city} Guinea hotel contact information`
   const searchResults = await zai.functions.invoke('web_search', {
@@ -466,13 +500,28 @@ export async function enrichHotelData(
 
 export async function searchAndAddHotels(
   query: string
-): Promise<{ found: number; added: number; duplicates: number }> {
-  const zai = await ZAI.create()
+): Promise<{ found: number; added: number; duplicates: number; error?: string }> {
+  let zai
+  try {
+    zai = await createZAI()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error(`[AUTOMATION searchAndAddHotels] ZAI init failed: ${msg}`)
+    return { found: 0, added: 0, duplicates: 0, error: `Search '${query}' failed: ${msg}` }
+  }
 
-  const searchResults = await zai.functions.invoke('web_search', {
-    query,
-    num: 10,
-  })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let searchResults: any[]
+  try {
+    searchResults = await zai.functions.invoke('web_search', {
+      query,
+      num: 10,
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error(`[AUTOMATION searchAndAddHotels] Search failed for "${query}": ${msg}`)
+    return { found: 0, added: 0, duplicates: 0, error: `Search '${query}' failed: ${msg}` }
+  }
 
   if (!searchResults || !Array.isArray(searchResults)) {
     return { found: 0, added: 0, duplicates: 0 }
@@ -620,9 +669,12 @@ export async function runFullCollection(): Promise<{
   added: number
   verified: number
   enriched: number
+  errors: string[]
+  success: boolean
 }> {
   let totalSearched = 0
   let totalAdded = 0
+  const errors: string[] = []
 
   // Phase 1: Search and add new hotels from multiple queries
   for (const query of FULL_COLLECTION_QUERIES) {
@@ -630,8 +682,13 @@ export async function runFullCollection(): Promise<{
       const result = await searchAndAddHotels(query)
       totalSearched += result.found
       totalAdded += result.added
+      if (result.error) {
+        errors.push(result.error)
+      }
     } catch (err) {
-      console.error(`[AUTOMATION runFullCollection] Search failed for "${query}":`, err)
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`[AUTOMATION runFullCollection] Search failed for "${query}":`, msg)
+      errors.push(`Search '${query}' failed: ${msg}`)
     }
   }
 
@@ -641,7 +698,9 @@ export async function runFullCollection(): Promise<{
     const verifyResult = await verifyAllUrls()
     verified = verifyResult.verified
   } catch (err) {
-    console.error('[AUTOMATION runFullCollection] URL verification failed:', err)
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[AUTOMATION runFullCollection] URL verification failed:', msg)
+    errors.push(`URL verification failed: ${msg}`)
   }
 
   // Phase 3: Enrich hotels missing data (phone, email, web)
@@ -664,14 +723,18 @@ export async function runFullCollection(): Promise<{
         const result = await enrichHotelData(hotel.id)
         if (result.enriched) enriched++
       } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
         console.error(
           `[AUTOMATION runFullCollection] Enrich failed for hotel ${hotel.id}:`,
-          err
+          msg
         )
+        errors.push(`Enrichment failed for hotel ${hotel.id}: ${msg}`)
       }
     }
   } catch (err) {
-    console.error('[AUTOMATION runFullCollection] Enrichment phase failed:', err)
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[AUTOMATION runFullCollection] Enrichment phase failed:', msg)
+    errors.push(`Enrichment phase failed: ${msg}`)
   }
 
   // Log the full collection cycle
@@ -697,5 +760,7 @@ export async function runFullCollection(): Promise<{
     added: totalAdded,
     verified,
     enriched,
+    errors,
+    success: errors.length === 0,
   }
 }
