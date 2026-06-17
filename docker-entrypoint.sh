@@ -20,6 +20,8 @@ fi
 if [ -z "$DATABASE_URL" ]; then
     export DATABASE_URL="file:$DATA_DIR/hotelscout.db"
     echo "📦 DATABASE_URL not set, defaulting to: $DATABASE_URL"
+else
+    echo "📦 DATABASE_URL already set: $DATABASE_URL"
 fi
 
 # ── Run Prisma migrations ────────────────────────────────
@@ -29,19 +31,20 @@ npx prisma db push --skip-generate 2>&1 || {
 }
 
 # ── Seed database if empty ───────────────────────────────
-# Check if the database has any hotels (indicates it's been seeded)
-DB_PATH=$(echo "$DATABASE_URL" | sed 's/file://')
-if [ -f "$DB_PATH" ]; then
-    HOTEL_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM Hotel;" 2>/dev/null || echo "0")
-    if [ "$HOTEL_COUNT" = "0" ] || [ -z "$HOTEL_COUNT" ]; then
-        echo "🌱 Database is empty, running seed..."
-        npx prisma db seed 2>&1 || echo "⚠️  Seed failed or not configured. Continuing..."
-    else
-        echo "✅ Database has $HOTEL_COUNT hotels. Skipping seed."
-    fi
+# Use Node.js + Prisma Client for a reliable check
+NEEDS_SEED=$(node -e "
+const { PrismaClient } = require('@prisma/client');
+const db = new PrismaClient();
+db.hotel.count().then(c => { console.log(c > 0 ? 'no' : 'yes'); db.\$disconnect(); }).catch(() => { console.log('yes'); db.\$disconnect(); });
+" 2>/dev/null || echo "yes")
+
+if [ "$NEEDS_SEED" = "yes" ]; then
+    echo "🌱 Database is empty, running seed with tsx..."
+    npx tsx prisma/seed.ts 2>&1 || {
+        echo "⚠️  tsx seed failed. The app will start with empty data."
+    }
 else
-    echo "🌱 No database file found, running seed after push..."
-    npx prisma db seed 2>&1 || echo "⚠️  Seed failed or not configured. Continuing..."
+    echo "✅ Database has data. Skipping seed."
 fi
 
 # ── Start the application ────────────────────────────────

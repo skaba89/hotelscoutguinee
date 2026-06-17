@@ -8,20 +8,22 @@ FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install bun for consistency with existing lockfile
-RUN npm install -g bun
-
 # Copy package files
-COPY package.json bun.lock ./
+COPY package.json package-lock.json* bun.lock* ./
 
 # Install all dependencies (including devDependencies for build)
-RUN bun install --frozen-lockfile
+# Use npm for reliability; fall back to bun if available
+RUN if [ -f package-lock.json ]; then \
+      npm ci --ignore-scripts; \
+    elif [ -f bun.lock ]; then \
+      npm install -g bun && bun install --frozen-lockfile; \
+    else \
+      npm install --ignore-scripts; \
+    fi
 
 # ---------- Stage 2: Build ----------
 FROM node:22-alpine AS builder
 WORKDIR /app
-
-RUN npm install -g bun
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
@@ -36,10 +38,10 @@ ENV DATABASE_URL="file:./build-placeholder.db"
 RUN npx prisma generate
 
 # Build Next.js (standalone output)
-RUN bun run build
+RUN npm run build
 
 # Remove devDependencies after build
-RUN bun install --frozen-lockfile --production
+RUN npm prune --production
 
 # ---------- Stage 3: Production ----------
 FROM node:22-alpine AS runner
@@ -70,6 +72,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+
+# Copy seed file for entrypoint seeding
+COPY --from=builder --chown=nextjs:nodejs /app/prisma/seed.ts ./prisma/seed.ts
+
+# Install tsx for running TypeScript seed at runtime
+RUN npm install -g tsx
 
 # Copy entrypoint script
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh

@@ -1,7 +1,8 @@
 #!/bin/bash
 # ============================================================
 # HotelScout Guinea — Render Build Script
-# Exécuté à chaque déploiement sur Render
+# Exécuté à chaque déploiement sur Render (Node runtime)
+# NOTE: Si un Dockerfile est présent, Render utilise le Dockerfile à la place
 # ============================================================
 set -e
 
@@ -11,7 +12,10 @@ echo "NPM version: $(npm --version)"
 
 # 1. Installer les dépendances
 echo "📦 Installing dependencies..."
-npm install
+npm install 2>&1 || {
+  echo "⚠️ npm install failed, trying with --legacy-peer-deps..."
+  npm install --legacy-peer-deps
+}
 
 # 2. Générer le client Prisma
 echo "🔄 Generating Prisma client..."
@@ -25,7 +29,7 @@ mkdir -p "$DATA_DIR"
 echo "🗄️ Pushing Prisma schema to database..."
 export DATABASE_URL="file:$DATA_DIR/hotelscout.db"
 npx prisma db push --skip-generate 2>&1 || {
-    echo "⚠️ Prisma db push failed, will retry on start..."
+  echo "⚠️ Prisma db push failed, will retry on start..."
 }
 
 # 5. Seeder la base si elle est vide (using Node.js with tsx)
@@ -38,7 +42,6 @@ db.hotel.count().then(c => { console.log(c > 0 ? 'no' : 'yes'); db.\$disconnect(
 
 if [ "$NEEDS_SEED" = "yes" ]; then
     echo "🌱 Database is empty, running seed with tsx..."
-    # Install tsx for running TypeScript seed
     npx tsx prisma/seed.ts 2>&1 || {
         echo "⚠️ tsx seed failed, trying with npx ts-node..."
         npx ts-node --compiler-options '{"module":"CommonJS"}' prisma/seed.ts 2>&1 || {

@@ -73,6 +73,10 @@ async function authFetch(input: string | URL | globalThis.Request, init?: Reques
   // If we get a 401, the token is invalid or expired
   if (response.status === 401 && token) {
     setAuthToken(null)
+    // Dispatch a custom event so the app can show login modal
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('auth:expired'))
+    }
   }
 
   return response
@@ -371,7 +375,7 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
         toast({ title: 'Étape mise à jour', description: status === 'completed' ? 'Étape terminée' : status === 'skipped' ? 'Étape ignorée' : 'Étape en cours' })
         // Refresh the active reservation
         if (activeReservation) {
-          const res2 = await fetch(`/api/reservations/${activeReservation.id}`)
+          const res2 = await authFetch(`/api/reservations/${activeReservation.id}`)
           if (res2.ok) {
             const data = await res2.json()
             setActiveReservation(data.reservation ?? null)
@@ -399,7 +403,7 @@ function MenuReservationPage({ toast, onNavigate }: { toast: ReturnType<typeof u
         setShowAddStep(false)
         setNewStep({ step: '', label: '' })
         // Refresh
-        const res2 = await fetch(`/api/reservations/${activeReservation.id}`)
+        const res2 = await authFetch(`/api/reservations/${activeReservation.id}`)
         if (res2.ok) {
           const data = await res2.json()
           setActiveReservation(data.reservation ?? null)
@@ -1095,7 +1099,7 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
       if (statusFilter !== 'all') params.set('statusDigital', statusFilter)
       if (priorityFilter !== 'all') params.set('priority', priorityFilter)
 
-      const res = await fetch(`/api/hotels?${params}`)
+      const res = await authFetch(`/api/hotels?${params}`)
       if (res.ok) {
         const data = await res.json()
         setHotels(data.hotels ?? [])
@@ -1114,7 +1118,7 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
   const fetchHotelDetail = useCallback(async (id: string) => {
     setDetailLoading(true)
     try {
-      const res = await fetch(`/api/hotels/${id}`)
+      const res = await authFetch(`/api/hotels/${id}`)
       if (res.ok) {
         const data = await res.json()
         setHotelDetail(data.hotel ?? null)
@@ -1142,7 +1146,7 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
       if (regionFilter !== 'all') params.set('region', regionFilter)
       if (statusFilter !== 'all') params.set('statusDigital', statusFilter)
       if (priorityFilter !== 'all') params.set('priority', priorityFilter)
-      const res = await fetch(`/api/export?${params}`)
+      const res = await authFetch(`/api/export?${params}`)
       if (res.ok) {
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
@@ -1182,7 +1186,7 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
     if (!editHotel) return
     setEditSaving(true)
     try {
-      const res = await fetch(`/api/hotels/${editHotel.id}`, {
+      const res = await authFetch(`/api/hotels/${editHotel.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm),
@@ -1203,7 +1207,7 @@ function HotelsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) 
 
   const handleDeleteHotel = async (id: string) => {
     try {
-      const res = await fetch(`/api/hotels/${id}`, { method: 'DELETE' })
+      const res = await authFetch(`/api/hotels/${id}`, { method: 'DELETE' })
       if (res.ok) {
         toast({ title: 'Supprimé', description: 'Hôtel supprimé avec succès' })
         fetchHotels()
@@ -1621,27 +1625,44 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
   const [enriching, setEnriching] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searching, setSearching] = useState(false)
-  const [results, setResults] = useState<{ searched: number; added: number; verified: number; enriched: number; errors?: string[]; success?: boolean } | null>(null)
-  const [verifyResults, setVerifyResults] = useState<{ verified: number; summary: Record<string, number> } | null>(null)
-  const [enrichResults, setEnrichResults] = useState<{ totalProcessed: number; enriched: number; notEnriched: number } | null>(null)
-  const [searchResults, setSearchResults] = useState<{ totalResults: number; hotelsAdded: number; hotelsSkipped: number } | null>(null)
+  const [results, setResults] = useState<{
+    searched: number; added: number; verified: number; enriched: number
+    errors?: string[]; phases?: {
+      search: { queries: number; succeeded: number; failed: number }
+      verify: { attempted: boolean; succeeded: boolean; error?: string }
+      enrich: { attempted: boolean; succeeded: boolean; hotelsFound: number; error?: string }
+    }
+  } | null>(null)
+  const [verifyResults, setVerifyResults] = useState<{ verified: number; ok?: number; failed?: number; summary?: Record<string, number>; dbError?: boolean } | null>(null)
+  const [enrichResults, setEnrichResults] = useState<{ totalProcessed: number; enriched: number; notEnriched: number; dbError?: boolean } | null>(null)
+  const [searchResults, setSearchResults] = useState<{ totalResults: number; hotelsAdded: number; hotelsSkipped: number; dbError?: boolean } | null>(null)
+  const [collectionError, setCollectionError] = useState<string | null>(null)
 
   const handleCollect = async () => {
     setCollecting(true)
     setResults(null)
+    setCollectionError(null)
     try {
       const res = await authFetch('/api/cron/scheduled', { method: 'POST' })
       const data = await res.json()
-      setResults(data)
-      if (data.success === false && data.errors?.length > 0) {
-        toast({ title: 'Collecte terminée avec erreurs', description: `${data.added ?? 0} ajoutés, ${data.enriched ?? 0} enrichis, ${data.errors.length} erreur(s)`, variant: 'destructive' })
-      } else if (res.ok) {
-        toast({ title: 'Collecte terminée', description: `${data.added ?? 0} ajoutés, ${data.enriched ?? 0} enrichis, ${data.verified ?? 0} vérifiés` })
+      if (res.ok || data.searched !== undefined) {
+        setResults(data)
+        const hasErrors = data.errors && data.errors.length > 0
+        if (hasErrors) {
+          setCollectionError(data.errors.slice(0, 3).join('\n'))
+          toast({ title: 'Collecte terminée avec erreurs', description: `${data.added ?? 0} ajoutés, ${data.enriched ?? 0} enrichis. Erreurs: ${data.errors.length}`, variant: 'destructive' })
+        } else {
+          toast({ title: 'Collecte terminée', description: `${data.added ?? 0} ajoutés, ${data.enriched ?? 0} enrichis, ${data.verified ?? 0} vérifiés` })
+        }
       } else {
-        toast({ title: 'Erreur de collecte', description: 'La collecte automatique a échoué', variant: 'destructive' })
+        const errMsg = data.error || 'La collecte automatique a échoué'
+        setCollectionError(errMsg)
+        toast({ title: 'Erreur de collecte', description: errMsg, variant: 'destructive' })
       }
-    } catch {
-      toast({ title: 'Erreur', description: 'Impossible de lancer la collecte', variant: 'destructive' })
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Impossible de lancer la collecte'
+      setCollectionError(errMsg)
+      toast({ title: 'Erreur', description: errMsg, variant: 'destructive' })
     } finally {
       setCollecting(false)
     }
@@ -1655,7 +1676,13 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
       if (res.ok) {
         const data = await res.json()
         setVerifyResults(data)
-        toast({ title: 'Vérification terminée', description: `${data.verified} URLs vérifiées` })
+        if (data.dbError) {
+          toast({ title: 'Erreur base de données', description: 'La vérification a échoué — base de données indisponible', variant: 'destructive' })
+        } else {
+          toast({ title: 'Vérification terminée', description: `${data.verified ?? 0} URLs vérifiées` })
+        }
+      } else {
+        toast({ title: 'Erreur', description: 'La vérification a échoué — vérifiez la connexion à la base de données', variant: 'destructive' })
       }
     } catch {
       toast({ title: 'Erreur', description: 'Impossible de vérifier les URLs', variant: 'destructive' })
@@ -1672,7 +1699,11 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
       if (res.ok) {
         const data = await res.json()
         setEnrichResults(data)
-        toast({ title: 'Enrichissement terminé', description: `${data.enriched} hôtels enrichis sur ${data.totalProcessed}` })
+        if (data.dbError) {
+          toast({ title: 'Erreur base de données', description: "L'enrichissement a échoué — base de données indisponible", variant: 'destructive' })
+        } else {
+          toast({ title: 'Enrichissement terminé', description: `${data.enriched ?? 0} hôtels enrichis sur ${data.totalProcessed ?? 0}` })
+        }
       }
     } catch {
       toast({ title: 'Erreur', description: "Impossible d'enrichir les données", variant: 'destructive' })
@@ -1690,7 +1721,11 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
       if (res.ok) {
         const data = await res.json()
         setSearchResults(data)
-        toast({ title: 'Recherche terminée', description: `${data.hotelsAdded} nouveaux hôtels trouvés` })
+        if (data.dbError) {
+          toast({ title: 'Erreur base de données', description: 'La recherche a échoué — base de données indisponible', variant: 'destructive' })
+        } else {
+          toast({ title: 'Recherche terminée', description: `${data.hotelsAdded ?? 0} nouveaux hôtels trouvés` })
+        }
       }
     } catch {
       toast({ title: 'Erreur', description: 'La recherche a échoué', variant: 'destructive' })
@@ -1701,6 +1736,20 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
 
   return (
     <div className="space-y-6">
+      {/* Error Banner */}
+      {collectionError && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-xs">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold text-red-700 dark:text-red-400">Erreurs lors de la collecte</p>
+              {collectionError.split('\n').map((err, i) => (
+                <p key={i} className="text-red-600 dark:text-red-300">{err}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Auto Collect */}
         <Card className="border-guinea-green/20">
@@ -1710,7 +1759,7 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
               Collecte automatique
             </CardTitle>
             <CardDescription className="text-xs">
-              Lance 8 requêtes de recherche prédéfinies pour couvrir toutes les régions de Guinée
+              Lance 12 requêtes de recherche prédéfinies pour couvrir toutes les régions de Guinée
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -1724,6 +1773,22 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
                 <div className="flex justify-between"><span className="text-emerald-600">Ajoutés</span><span className="font-semibold text-emerald-600">{results.added ?? 0}</span></div>
                 <div className="flex justify-between"><span className="text-blue-600">Enrichis</span><span className="font-semibold text-blue-600">{results.enriched ?? 0}</span></div>
                 <div className="flex justify-between"><span className="text-amber-600">URLs vérifiées</span><span className="font-semibold text-amber-600">{results.verified ?? 0}</span></div>
+                {results.phases && (
+                  <>
+                    <div className="border-t mt-1 pt-1">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Requêtes réussies</span><span className="font-semibold">{results.phases.search.succeeded}/{results.phases.search.queries}</span></div>
+                      {results.phases.search.failed > 0 && (
+                        <div className="flex justify-between"><span className="text-red-500">Requêtes échouées</span><span className="font-semibold text-red-500">{results.phases.search.failed}</span></div>
+                      )}
+                    </div>
+                    {results.phases.verify.error && (
+                      <div className="text-red-500 text-[10px] mt-1">Vérification: {results.phases.verify.error}</div>
+                    )}
+                    {results.phases.enrich.error && (
+                      <div className="text-red-500 text-[10px] mt-1">Enrichissement: {results.phases.enrich.error}</div>
+                    )}
+                  </>
+                )}
                 {results.errors && results.errors.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-red-200 dark:border-red-900">
                     <div className="flex justify-between"><span className="text-red-600 font-semibold">Erreurs</span><span className="font-semibold text-red-600">{results.errors.length}</span></div>
@@ -1758,10 +1823,19 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
             </Button>
             {verifyResults && (
               <div className="mt-3 p-3 bg-muted/50 rounded-lg text-xs space-y-1">
-                <div className="flex justify-between"><span className="text-muted-foreground">URLs vérifiées</span><span className="font-semibold">{verifyResults.verified}</span></div>
-                <div className="flex justify-between"><span className="text-emerald-600">✓ OK</span><span className="font-semibold">{verifyResults.summary.ok ?? 0}</span></div>
-                <div className="flex justify-between"><span className="text-red-600">✗ Hors ligne</span><span className="font-semibold">{verifyResults.summary.down ?? 0}</span></div>
-                <div className="flex justify-between"><span className="text-amber-600">⏱ Timeout</span><span className="font-semibold">{verifyResults.summary.timeout ?? 0}</span></div>
+                {verifyResults.dbError ? (
+                  <div className="text-red-500">
+                    <AlertTriangle className="h-3.5 w-3.5 inline mr-1" />
+                    Base de données indisponible — impossible de vérifier les URLs
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between"><span className="text-muted-foreground">URLs vérifiées</span><span className="font-semibold">{verifyResults.verified ?? 0}</span></div>
+                    <div className="flex justify-between"><span className="text-emerald-600">OK</span><span className="font-semibold">{verifyResults.ok ?? verifyResults.summary?.ok ?? 0}</span></div>
+                    <div className="flex justify-between"><span className="text-red-600">Hors ligne</span><span className="font-semibold">{verifyResults.failed ?? verifyResults.summary?.down ?? 0}</span></div>
+                    <div className="flex justify-between"><span className="text-amber-600">Timeout</span><span className="font-semibold">{verifyResults.summary?.timeout ?? 0}</span></div>
+                  </>
+                )}
               </div>
             )}
           </CardContent>
@@ -1785,9 +1859,18 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
             </Button>
             {enrichResults && (
               <div className="mt-3 p-3 bg-muted/50 rounded-lg text-xs space-y-1">
-                <div className="flex justify-between"><span className="text-muted-foreground">Hôtels traités</span><span className="font-semibold">{enrichResults.totalProcessed}</span></div>
-                <div className="flex justify-between"><span className="text-emerald-600">Enrichis</span><span className="font-semibold text-emerald-600">{enrichResults.enriched}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Non enrichis</span><span className="font-semibold">{enrichResults.notEnriched}</span></div>
+                {enrichResults.dbError ? (
+                  <div className="text-red-500">
+                    <AlertTriangle className="h-3.5 w-3.5 inline mr-1" />
+                    Base de données indisponible — impossible d&apos;enrichir les données
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Hôtels traités</span><span className="font-semibold">{enrichResults.totalProcessed ?? 0}</span></div>
+                    <div className="flex justify-between"><span className="text-emerald-600">Enrichis</span><span className="font-semibold text-emerald-600">{enrichResults.enriched ?? 0}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Non enrichis</span><span className="font-semibold">{enrichResults.notEnriched ?? 0}</span></div>
+                  </>
+                )}
               </div>
             )}
           </CardContent>
@@ -1821,9 +1904,18 @@ function CollectePage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
           </div>
           {searchResults && (
             <div className="mt-3 p-3 bg-muted/50 rounded-lg text-xs space-y-1">
-              <div className="flex justify-between"><span className="text-muted-foreground">Résultats web</span><span className="font-semibold">{searchResults.totalResults}</span></div>
-              <div className="flex justify-between"><span className="text-emerald-600">Hôtels ajoutés</span><span className="font-semibold text-emerald-600">{searchResults.hotelsAdded}</span></div>
-              <div className="flex justify-between"><span className="text-amber-600">Ignorés (doublons)</span><span className="font-semibold text-amber-600">{searchResults.hotelsSkipped}</span></div>
+              {searchResults.dbError ? (
+                <div className="text-red-500">
+                  <AlertTriangle className="h-3.5 w-3.5 inline mr-1" />
+                  Base de données indisponible — impossible de sauvegarder les résultats
+                </div>
+              ) : (
+                <>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Résultats web</span><span className="font-semibold">{searchResults.totalResults ?? 0}</span></div>
+                  <div className="flex justify-between"><span className="text-emerald-600">Hôtels ajoutés</span><span className="font-semibold text-emerald-600">{searchResults.hotelsAdded ?? 0}</span></div>
+                  <div className="flex justify-between"><span className="text-amber-600">Ignorés (doublons)</span><span className="font-semibold text-amber-600">{searchResults.hotelsSkipped ?? 0}</span></div>
+                </>
+              )}
             </div>
           )}
         </CardContent>
@@ -2544,7 +2636,7 @@ function SettingsPage({ toast }: { toast: ReturnType<typeof useToast>['toast'] }
 
   const handleDeleteKey = async (providerId: string) => {
     try {
-      const res = await fetch(`/api/ai/providers/${providerId}`, { method: 'DELETE' })
+      const res = await authFetch(`/api/ai/providers/${providerId}`, { method: 'DELETE' })
       if (res.ok) {
         toast({ title: 'Clé supprimée', description: `Clé API ${providerId} retirée` })
         fetchProviders()
@@ -3034,6 +3126,17 @@ function HomeInner() {
       })
     }
   }, [])
+
+  // Listen for auth expiration events from authFetch
+  useEffect(() => {
+    const handleExpired = () => {
+      setIsAuthenticated(false)
+      setShowLogin(true)
+      toast({ title: 'Session expirée', description: 'Veuillez vous reconnecter', variant: 'destructive' })
+    }
+    window.addEventListener('auth:expired', handleExpired)
+    return () => window.removeEventListener('auth:expired', handleExpired)
+  }, [toast])
 
   const handleLogin = (token: string) => {
     setIsAuthenticated(true)

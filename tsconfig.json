@@ -42,8 +42,15 @@
     "agent-ctx",
     "download",
     "examples",
+    "hotelscoutguinee",
     "verify_*.json",
     "search_*.json",
-    "update_hotels.py"
+    "update_hotels.py",
+    "search_hotels_*.mjs",
+    "upload",
+    "qa-screenshots",
+    "tool-results",
+    "mini-services",
+    "db"
   ]
 }
