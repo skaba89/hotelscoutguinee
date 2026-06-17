@@ -6,8 +6,18 @@
 
 echo "🚀 HotelScout Guinea — Starting..."
 
-# Résoudre le chemin de la base de données
-DATA_DIR="/opt/render/project/data"
+# Résoudre le chemin de la base de données.
+# Render fournit un disque persistant à /opt/render/project/data UNIQUEMENT si configuré.
+# Sur le free tier ou sans disque, ce chemin peut ne pas être accessible depuis le
+# standalone server. On teste l'accessibilité en écriture, sinon on retombe sur ./data/.
+DATA_DIR=""
+for candidate in "/opt/render/project/data" "$PWD/data" "/app/data"; do
+  if mkdir -p "$candidate" 2>/dev/null && [ -w "$candidate" ]; then
+    DATA_DIR="$candidate"
+    break
+  fi
+done
+DATA_DIR="${DATA_DIR:-$PWD/data}"
 mkdir -p "$DATA_DIR"
 
 # Forcer DATABASE_URL au format SQLite "file:" attendu par Prisma.
@@ -20,6 +30,9 @@ if [ -z "$DATABASE_URL" ] || [ "${DATABASE_URL#file:}" = "$DATABASE_URL" ]; then
 else
   echo "📦 DATABASE_URL already valid: $DATABASE_URL"
 fi
+
+# Toucher le fichier DB pour s'assurer qu'il existe et est accessible en écriture
+touch "$DATA_DIR/hotelscout.db" 2>/dev/null && echo "✅ DB file writable at $DATA_DIR/hotelscout.db" || echo "⚠️ Cannot write to $DATA_DIR/hotelscout.db"
 
 # S'assurer que le schéma est à jour
 echo "🔄 Syncing database schema..."

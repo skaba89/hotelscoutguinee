@@ -1,49 +1,92 @@
 import { PrismaClient } from '@prisma/client'
 
 /**
- * Ensure DATABASE_URL is in the format expected by Prisma SQLite.
- * On Render (or any PaaS), the user may accidentally set DATABASE_URL to a
- * Postgres-style URL (postgres://...) or a bare filesystem path, which Prisma
- * rejects with "the URL must start with the protocol `file:`".
+ * Ensure DATABASE_URL is in the format expected by Prisma SQLite AND that the
+ * target file is actually writable. On Render (or any PaaS), the env var may
+ * be set to a Postgres-style URL, a bare filesystem path, or a path that the
+ * standalone server process cannot write to. Prisma then fails with either
+ * "the URL must start with the protocol `file:`" or "Unable to open the
+ * database file" (SQLite error 14).
  *
- * If the value does not start with `file:`, we rewrite it to a local SQLite
- * file inside a persistent data directory. This is a defensive runtime guard
- * that complements the render-start.sh script.
+ * Strategy:
+ *   1. If DATABASE_URL is missing or doesn't start with `file:`, rewrite it.
+ *   2. If DATABASE_URL is `file:<path>` but the parent dir is not writable,
+ *      rewrite it to a writable location.
+ *   3. Always ensure the parent directory exists and the DB file is touchable.
  */
 function ensureValidDatabaseUrl(): void {
-  const raw = process.env.DATABASE_URL
-  if (raw && raw.startsWith('file:')) {
-    return // Already valid
-  }
-
-  // Pick a persistent location. On Render, /opt/render/project/data is the
-  // persistent disk. Locally, fall back to ./db/.
   const fs = require('fs')
   const path = require('path')
-  const candidateDirs = [
-    '/opt/render/project/data',
-    path.join(process.cwd(), 'db'),
-  ]
-  const dataDir = candidateDirs.find((d) => {
+  const os = require('os')
+
+  function tryWrite(filePath: string): boolean {
     try {
-      fs.mkdirSync(d, { recursive: true })
-      fs.accessSync(d, fs.constants.W_OK)
+      fs.mkdirSync(path.dirname(filePath), { recursive: true })
+      fs.closeSync(fs.openSync(filePath, 'a'))
       return true
     } catch {
       return false
     }
-  }) || path.join(process.cwd(), 'db')
-
-  const fixed = `file:${path.join(dataDir, 'hotelscout.db')}`
-  if (raw) {
-    console.warn(
-      `[db] DATABASE_URL="${raw}" is not a valid SQLite URL. ` +
-      `Falling back to "${fixed}".`
-    )
-  } else {
-    console.warn(`[db] DATABASE_URL not set. Using "${fixed}".`)
   }
-  process.env.DATABASE_URL = fixed
+
+  function pickWritableDbPath(): string {
+    const fileName = 'hotelscout.db'
+    const candidates = [
+      '/opt/render/project/data',
+      '/app/data',
+      '/tmp',
+      path.join(process.cwd(), 'data'),
+      path.join(os.homedir(), '.hotelscout'),
+    ]
+    for (const dir of candidates) {
+      const full = path.join(dir, fileName)
+      if (tryWrite(full)) {
+        return full
+      }
+    }
+    // Last resort: cwd/data
+    const fallback = path.join(process.cwd(), 'data', fileName)
+    try {
+      fs.mkdirSync(path.dirname(fallback), { recursive: true })
+    } catch {
+      // ignore
+    }
+    return fallback
+  }
+
+  const raw = process.env.DATABASE_URL || ''
+  let resolvedPath = ''
+
+  if (raw.startsWith('file:')) {
+    resolvedPath = raw.slice('file:'.length)
+    // Handle file:./relative paths — resolve against cwd
+    if (resolvedPath.startsWith('./') || resolvedPath.startsWith('../')) {
+      resolvedPath = path.resolve(resolvedPath)
+    }
+    if (!tryWrite(resolvedPath)) {
+      console.warn(
+        `[db] DATABASE_URL="${raw}" points to a non-writable location. ` +
+        `Looking for a writable fallback...`
+      )
+      resolvedPath = pickWritableDbPath()
+    }
+  } else {
+    if (raw) {
+      console.warn(
+        `[db] DATABASE_URL="${raw}" is not a valid SQLite URL. ` +
+        `Looking for a writable fallback...`
+      )
+    } else {
+      console.warn(`[db] DATABASE_URL not set. Looking for a writable location...`)
+    }
+    resolvedPath = pickWritableDbPath()
+  }
+
+  const fixed = `file:${resolvedPath}`
+  if (fixed !== raw) {
+    console.warn(`[db] Using DATABASE_URL="${fixed}"`)
+    process.env.DATABASE_URL = fixed
+  }
 }
 
 ensureValidDatabaseUrl()
