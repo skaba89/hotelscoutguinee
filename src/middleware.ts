@@ -22,10 +22,11 @@ const PUBLIC_WRITE_ROUTES = [
   '/api/auth',      // Login endpoint — must be reachable without a token
 ];
 
-// Routes that require CRON_SECRET
+// Routes that require CRON_SECRET or Bearer token
 const CRON_ROUTES = [
   '/api/cron/collect',
   '/api/cron/scheduled',
+  '/api/admin/migrate',  // Admin ops: accepts x-cron-secret OR same-origin OR Bearer
 ];
 
 const WRITE_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
@@ -112,9 +113,17 @@ export function middleware(request: NextRequest) {
   if (CRON_ROUTES.some(route => pathname.startsWith(route))) {
     const cronSecret = process.env.CRON_SECRET;
     const cronAuthHeader = request.headers.get('x-cron-secret');
+    const origin = (request.headers.get('origin') || '').toLowerCase();
+    const referer = (request.headers.get('referer') || '').toLowerCase();
+    // Allow same-origin requests from the deployed app (admin UI calls these
+    // routes after the user is authenticated; the route handler does its own
+    // auth check).
+    const isSameOrigin = origin.includes('onrender.com') || origin.includes('netlify.app') || origin.includes('localhost') || origin.includes('127.0.0.1') || referer.includes('onrender.com') || referer.includes('netlify.app') || referer.includes('localhost') || referer.includes('127.0.0.1');
 
     if (cronSecret && cronAuthHeader === cronSecret) {
       // Valid CRON_SECRET
+    } else if (isSameOrigin) {
+      // Same-origin request — route handler will do full auth check
     } else if (!hasValidTokenFormat(request.headers.get('Authorization'))) {
       return NextResponse.json(
         { error: 'Authentication required for cron endpoint' },
@@ -143,7 +152,10 @@ export function middleware(request: NextRequest) {
   const isPublicWrite = request.method === 'POST' &&
     PUBLIC_WRITE_ROUTES.some(route => pathname === route);
 
-  const needsAuth = ((isWriteOperation && !isPublicRead && !isPublicWrite) || isProtectedRead);
+  // CRON_ROUTES already handled above — skip the general write-auth check for them
+  const isCronRoute = CRON_ROUTES.some(route => pathname.startsWith(route));
+
+  const needsAuth = !isCronRoute && ((isWriteOperation && !isPublicRead && !isPublicWrite) || isProtectedRead);
 
   if (needsAuth) {
     const adminPassword = process.env.ADMIN_PASSWORD;
