@@ -10,12 +10,15 @@ echo "🚀 HotelScout Guinea — Starting..."
 DATA_DIR="/opt/render/project/data"
 mkdir -p "$DATA_DIR"
 
-# Si DATABASE_URL n'est pas défini, utiliser le chemin par défaut
-if [ -z "$DATABASE_URL" ]; then
+# Forcer DATABASE_URL au format SQLite "file:" attendu par Prisma.
+# Sur Render, DATABASE_URL peut être défini par erreur à une URL Postgres ou un chemin sans protocole,
+# ce qui provoque "Error validating datasource db: the URL must start with the protocol file:".
+# On ignore toute valeur non conforme et on utilise le chemin local persistant.
+if [ -z "$DATABASE_URL" ] || [ "${DATABASE_URL#file:}" = "$DATABASE_URL" ]; then
   export DATABASE_URL="file:$DATA_DIR/hotelscout.db"
-  echo "📦 DATABASE_URL set to: $DATABASE_URL"
+  echo "📦 DATABASE_URL (forced) set to: $DATABASE_URL"
 else
-  echo "📦 DATABASE_URL already set: $DATABASE_URL"
+  echo "📦 DATABASE_URL already valid: $DATABASE_URL"
 fi
 
 # S'assurer que le schéma est à jour
