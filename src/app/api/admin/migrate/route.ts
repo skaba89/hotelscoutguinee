@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('x-cron-secret')
     const origin = (request.headers.get('origin') || '').toLowerCase()
     const referer = (request.headers.get('referer') || '').toLowerCase()
-    const isSameOrigin = origin.includes('netlify.app') || origin.includes('localhost') || referer.includes('netlify.app') || referer.includes('localhost')
+    const isSameOrigin = origin.includes('netlify.app') || origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('onrender.com') || referer.includes('netlify.app') || referer.includes('localhost') || referer.includes('127.0.0.1') || referer.includes('onrender.com')
 
     if (cronSecret && !isSameOrigin && authHeader !== cronSecret) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
