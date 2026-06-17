@@ -16,6 +16,12 @@ const PUBLIC_READ_ROUTES = [
   '/api/agency',    // Read-only (GET)
 ];
 
+// Routes that allow unauthenticated POST requests (e.g. login, signup)
+// These routes handle their own credential validation internally.
+const PUBLIC_WRITE_ROUTES = [
+  '/api/auth',      // Login endpoint — must be reachable without a token
+];
+
 // Routes that require CRON_SECRET
 const CRON_ROUTES = [
   '/api/cron/collect',
@@ -134,7 +140,10 @@ export function middleware(request: NextRequest) {
   const isPublicRead = request.method === 'GET' &&
     PUBLIC_READ_ROUTES.some(route => pathname === route || (pathname.startsWith(route) && pathname.replace(route, '').startsWith('/')));
 
-  const needsAuth = (isWriteOperation && !isPublicRead) || isProtectedRead;
+  const isPublicWrite = request.method === 'POST' &&
+    PUBLIC_WRITE_ROUTES.some(route => pathname === route);
+
+  const needsAuth = ((isWriteOperation && !isPublicRead && !isPublicWrite) || isProtectedRead);
 
   if (needsAuth) {
     const adminPassword = process.env.ADMIN_PASSWORD;
