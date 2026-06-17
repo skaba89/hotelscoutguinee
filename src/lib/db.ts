@@ -143,6 +143,44 @@ async function ensureSchema(db: PrismaClient): Promise<void> {
   }
 }
 
+/**
+ * Ensure a default admin user exists so the user can log in to the admin UI.
+ * This runs after ensureSchema. If the User table is empty, creates an admin
+ * user with credentials from env vars (ADMIN_PASSWORD) or a default password.
+ *
+ * This is a programmatic fallback for when prisma/seed.ts fails to run on
+ * Render (because npx tsx is not available in the standalone context).
+ */
+async function ensureAdminUser(db: PrismaClient): Promise<void> {
+  try {
+    const userCount = await db.user.count()
+    if (userCount > 0) {
+      return // Admin user already exists
+    }
+
+    console.warn('[db] No users found. Creating default admin user...')
+
+    // Dynamic import to avoid pulling bcrypt into every route that imports db
+    const { hashPassword } = await import('@/lib/auth')
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
+    const hashedPassword = await hashPassword(adminPassword)
+
+    await db.user.create({
+      data: {
+        username: 'admin',
+        password: hashedPassword,
+        name: 'Administrateur',
+        email: 'admin@hotelscout-gn.com',
+        role: 'admin',
+      },
+    })
+
+    console.log('[db] Default admin user created (username: admin)')
+  } catch (err) {
+    console.error('[db] Failed to create admin user:', err)
+  }
+}
+
 ensureValidDatabaseUrl()
 
 const globalForPrisma = globalThis as unknown as {
@@ -158,14 +196,17 @@ export const db = globalForPrisma.prisma ?? new PrismaClient({
 // In production, also cache globally to prevent multiple instances (fixes L5)
 globalForPrisma.prisma = db
 
-// Kick off schema creation in the background. We don't await this at module
-// load time (would block the first request), but every API route that uses
-// the DB will naturally wait for Prisma's own connection — and if the table
-// is missing, the route will return an error until ensureSchema completes.
-// Subsequent requests will succeed.
+// Kick off schema creation + admin user seeding in the background. We don't
+// await this at module load time (would block the first request), but every
+// API route that uses the DB will naturally wait for Prisma's own connection
+// — and if the table is missing, the route will return an error until
+// ensureSchema completes. Subsequent requests will succeed.
 if (!globalForPrisma.prismaSchemaReady) {
-  globalForPrisma.prismaSchemaReady = ensureSchema(db).catch((err) => {
-    console.error('[db] ensureSchema threw:', err)
+  globalForPrisma.prismaSchemaReady = (async () => {
+    await ensureSchema(db)
+    await ensureAdminUser(db)
+  })().catch((err) => {
+    console.error('[db] ensureSchema/ensureAdminUser threw:', err)
   })
 }
 
