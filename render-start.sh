@@ -34,13 +34,34 @@ fi
 # Toucher le fichier DB pour s'assurer qu'il existe et est accessible en écriture
 touch "$DATA_DIR/hotelscout.db" 2>/dev/null && echo "✅ DB file writable at $DATA_DIR/hotelscout.db" || echo "⚠️ Cannot write to $DATA_DIR/hotelscout.db"
 
-# S'assurer que le schéma est à jour
-echo "🔄 Syncing database schema..."
-npx prisma db push --skip-generate 2>&1 || {
-  echo "⚠️ Schema sync failed, retrying..."
+# S'assurer que le schéma est à jour — Retry avec --accept-data-loss si besoin
+echo "🔄 Syncing database schema (cwd=$PWD)..."
+SCHEMA_OK=false
+for attempt in 1 2 3; do
+  echo "  Attempt $attempt: npx prisma db push --skip-generate --accept-data-loss"
+  if npx prisma db push --skip-generate --accept-data-loss 2>&1; then
+    # Verify by querying Hotel table
+    VERIFY=$(node -e "
+const { PrismaClient } = require('@prisma/client');
+const db = new PrismaClient();
+db.hotel.count().then(c => { console.log('ok:' + c); db.\$disconnect(); }).catch(e => { console.log('error:' + e.message.slice(0,100)); db.\$disconnect(); });
+" 2>/dev/null || echo "error:unknown")
+    if [[ "$VERIFY" == ok:* ]]; then
+      echo "  ✅ Schema synced and verified: $VERIFY"
+      SCHEMA_OK=true
+      break
+    else
+      echo "  ⚠️ Schema push returned success but verification failed: $VERIFY"
+    fi
+  else
+    echo "  ⚠️ prisma db push attempt $attempt failed"
+  fi
   sleep 2
-  npx prisma db push --skip-generate 2>&1 || echo "⚠️ Schema sync warning (non-fatal)"
-}
+done
+
+if [ "$SCHEMA_OK" = false ]; then
+  echo "⚠️ All schema sync attempts failed. Continuing anyway — app may return DB errors."
+fi
 
 # Vérifier si la base a besoin de seeding
 echo "🌱 Checking if database needs seeding..."
