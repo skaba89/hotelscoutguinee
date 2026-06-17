@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { SCHEMA_SQL } from '@/lib/schema-sql'
 
 /**
  * Ensure DATABASE_URL is in the format expected by Prisma SQLite AND that the
@@ -89,10 +90,64 @@ function ensureValidDatabaseUrl(): void {
   }
 }
 
+/**
+ * Ensure all Prisma-managed tables exist in the database. This is a
+ * programmatic fallback for when `prisma db push` fails on Render (which
+ * happens silently when the build context can't find schema.prisma or when
+ * npx prisma times out). We run the CREATE TABLE IF NOT EXISTS statements
+ * directly via $executeRawUnsafe.
+ *
+ * Idempotent: safe to call on every server start.
+ */
+async function ensureSchema(db: PrismaClient): Promise<void> {
+  try {
+    // Quick probe: if Hotel table is queryable, schema already exists.
+    await db.$queryRaw`SELECT 1 FROM "Hotel" LIMIT 1`
+    return
+  } catch {
+    // Table doesn't exist — fall through to schema creation
+    console.warn('[db] Hotel table missing. Running programmatic schema creation...')
+  }
+
+  try {
+    // Split on semicolons that end statements (simple split works because
+    // our DDL has no embedded semicolons in strings)
+    const statements = SCHEMA_SQL
+      .split(/;\s*\n/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0 && !s.startsWith('--'))
+
+    for (const stmt of statements) {
+      try {
+        await db.$executeRawUnsafe(stmt + ';')
+      } catch (err) {
+        // Ignore "already exists" errors (CREATE TABLE IF NOT EXISTS should
+        // handle this, but be defensive about indexes too)
+        const msg = err instanceof Error ? err.message : String(err)
+        if (!/already exists/i.test(msg)) {
+          console.warn('[db] Schema statement failed:', msg.slice(0, 120))
+        }
+      }
+    }
+    console.log(`[db] Schema creation complete (${statements.length} statements executed)`)
+
+    // Verify
+    try {
+      const result = await db.$queryRaw`SELECT COUNT(*) as c FROM "Hotel"`
+      console.log('[db] Schema verified: Hotel table accessible')
+    } catch (err) {
+      console.error('[db] Schema verification failed:', err)
+    }
+  } catch (err) {
+    console.error('[db] Schema creation failed:', err)
+  }
+}
+
 ensureValidDatabaseUrl()
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
+  prismaSchemaReady: Promise<void> | undefined
 }
 
 export const db = globalForPrisma.prisma ?? new PrismaClient({
@@ -102,6 +157,17 @@ export const db = globalForPrisma.prisma ?? new PrismaClient({
 // In development, reuse the client across hot reloads
 // In production, also cache globally to prevent multiple instances (fixes L5)
 globalForPrisma.prisma = db
+
+// Kick off schema creation in the background. We don't await this at module
+// load time (would block the first request), but every API route that uses
+// the DB will naturally wait for Prisma's own connection — and if the table
+// is missing, the route will return an error until ensureSchema completes.
+// Subsequent requests will succeed.
+if (!globalForPrisma.prismaSchemaReady) {
+  globalForPrisma.prismaSchemaReady = ensureSchema(db).catch((err) => {
+    console.error('[db] ensureSchema threw:', err)
+  })
+}
 
 // Graceful shutdown
 if (process.env.NODE_ENV === 'production') {
