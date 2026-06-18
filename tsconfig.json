@@ -51,6 +51,7 @@
     "qa-screenshots",
     "tool-results",
     "mini-services",
-    "db"
+    "db",
+    "scripts"
   ]
 }

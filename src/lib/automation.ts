@@ -444,16 +444,36 @@ export async function enrichHotelData(
     return { enriched: false, fields: [] }
   }
 
-  // Initialize ZAI SDK (backend only)
-  const zai = await createZAI()
-
+  // Try ZAI SDK first, fall back to DuckDuckGo if network error
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let searchResults: any[]
   const searchQuery = `"${hotel.name}" ${hotel.city} Guinea hotel contact information`
-  const searchResults = await withRateLimitRetry(() =>
-    zai.functions.invoke('web_search', {
-      query: searchQuery,
-      num: 5,
-    })
-  )
+  try {
+    const zai = await createZAI()
+    searchResults = await withRateLimitRetry(() =>
+      zai.functions.invoke('web_search', {
+        query: searchQuery,
+        num: 5,
+      })
+    )
+  } catch (err) {
+    if (isNetworkError(err)) {
+      console.warn(
+        `[AUTOMATION enrichHotelData] ZAI unreachable, falling back to DuckDuckGo for "${hotel.name}"`
+      )
+      try {
+        searchResults = await duckDuckGoSearch(searchQuery, 5)
+      } catch (ddgErr) {
+        const ddgMsg = ddgErr instanceof Error ? ddgErr.message : String(ddgErr)
+        console.error(`[AUTOMATION enrichHotelData] DuckDuckGo failed: ${ddgMsg}`)
+        return { enriched: false, fields: [] }
+      }
+    } else {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`[AUTOMATION enrichHotelData] ZAI search failed: ${msg}`)
+      return { enriched: false, fields: [] }
+    }
+  }
 
   const enrichedFields: string[] = []
   const updates: Record<string, unknown> = {}
@@ -553,36 +573,66 @@ export async function enrichHotelData(
 
 // ─── 4. searchAndAddHotels ─────────────────────────────────────────
 
+import { duckDuckGoSearch, isNetworkError } from '@/lib/web-search-fallback'
+
 export async function searchAndAddHotels(
   query: string
 ): Promise<{ found: number; added: number; duplicates: number; error?: string }> {
-  let zai
-  try {
-    zai = await createZAI()
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error(`[AUTOMATION searchAndAddHotels] ZAI init failed: ${msg}`)
-    return { found: 0, added: 0, duplicates: 0, error: `Search '${query}' failed: ${msg}` }
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let searchResults: any[]
+  let searchSource = 'zai'
+
+  // Try ZAI SDK first
+  let zai: Awaited<ReturnType<typeof createZAI>> | null = null
   try {
+    zai = await createZAI()
     searchResults = await withRateLimitRetry(() =>
-      zai.functions.invoke('web_search', {
+      zai!.functions.invoke('web_search', {
         query,
         num: 10,
       })
     )
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error(`[AUTOMATION searchAndAddHotels] Search failed for "${query}": ${msg}`)
-    return { found: 0, added: 0, duplicates: 0, error: `Search '${query}' failed: ${msg}` }
+    if (isNetworkError(err)) {
+      // ZAI SDK unreachable (e.g. on Render where internal-api.z.ai is not
+      // reachable from outside Z.ai infrastructure). Fall back to DuckDuckGo.
+      console.warn(
+        `[AUTOMATION searchAndAddHotels] ZAI SDK unreachable (${msg}). Falling back to DuckDuckGo.`
+      )
+      try {
+        searchResults = await duckDuckGoSearch(query, 10)
+        searchSource = 'duckduckgo'
+        console.log(
+          `[AUTOMATION searchAndAddHotels] DuckDuckGo returned ${searchResults.length} results for "${query}"`
+        )
+      } catch (ddgErr) {
+        const ddgMsg = ddgErr instanceof Error ? ddgErr.message : String(ddgErr)
+        console.error(
+          `[AUTOMATION searchAndAddHotels] DuckDuckGo fallback failed for "${query}": ${ddgMsg}`
+        )
+        return {
+          found: 0,
+          added: 0,
+          duplicates: 0,
+          error: `Search '${query}' failed: ZAI (${msg}) + DuckDuckGo (${ddgMsg})`,
+        }
+      }
+    } else {
+      // Non-network error from ZAI (e.g. rate limit that exhausted retries)
+      console.error(`[AUTOMATION searchAndAddHotels] Search failed for "${query}": ${msg}`)
+      return { found: 0, added: 0, duplicates: 0, error: `Search '${query}' failed: ${msg}` }
+    }
   }
 
   if (!searchResults || !Array.isArray(searchResults)) {
     return { found: 0, added: 0, duplicates: 0 }
   }
+
+  // Log which search source was used (for debugging)
+  console.log(
+    `[AUTOMATION searchAndAddHotels] Processing ${searchResults.length} results from ${searchSource} for "${query}"`
+  )
 
   // Load existing hotels for duplicate checking
   const existingHotels = await db.hotel.findMany({
